@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <array>
 using namespace std;
 
 class Block {
@@ -47,7 +48,7 @@ public:
 class DisqueDur{
 private:
 	vector<Fichier*> listeFichier;
-	vector<Block*> FAT8; // Votre code implante une FAT-8.
+	array<Block*,256> FAT8; // Votre code implante une FAT-8
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
 	string nomFichier;
