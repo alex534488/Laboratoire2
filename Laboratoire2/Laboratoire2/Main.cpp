@@ -40,9 +40,9 @@ public:
 
 void UpdateFiles();
 void UpdateScreen();
-void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
-void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
-void deleteEOF(string nomFichier, fpos_t position);
+void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
+void write(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
+void deleteEOF(CHAR* nomFichier, fpos_t position);
 
 DisqueDur* dur;
 
@@ -82,13 +82,13 @@ void UpdateScreen() {
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	CHAR premierBlock;
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
 	premierBlock = FindFichier(nomFichier);
 }
 
-CHAR FindFichier(string nomFichier) {
+CHAR FindFichier(CHAR* nomFichier) {
 	CHAR* blockBuffer1;
 	CHAR* blockBuffer2;
 	for (CHAR i = FAT; i < 256; i++) {
@@ -102,11 +102,11 @@ CHAR FindFichier(string nomFichier) {
 	}
 }
 
-void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+void write(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
 }
 
-void deleteEOF(string nomFichier, fpos_t position) {
+void deleteEOF(CHAR* nomFichier, fpos_t position) {
 	// ouvre un fichier existant et le coupe à "position" puis le referme. Si position est 0, le fichier est effacé.
 }
 
