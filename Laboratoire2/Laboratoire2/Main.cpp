@@ -86,7 +86,17 @@ void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 }
 
 CHAR FindFichier(string nomFichier) {
-	for(CHAR i = )
+	CHAR* blockBuffer1;
+	CHAR* blockBuffer2;
+	for (CHAR i = FAT; i < 256; i++) {
+		dur->readBlock(i, blockBuffer1);
+		for (int j = 0; j < blockSize; j++) {
+			dur->readBlock(blockBuffer1[j], blockBuffer2)
+			if ( ) {
+
+			}
+		}
+	}
 }
 
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
