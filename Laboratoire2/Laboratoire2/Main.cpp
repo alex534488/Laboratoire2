@@ -5,7 +5,6 @@
 #include <array>
 using namespace std;
 
-
 #define CHAR unsigned char
 
 class DisqueDur{
@@ -14,8 +13,8 @@ private:
 	const CHAR FAT = 252;
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
-	string nomFichier;//HD.DH
-	ifstream fichierLecture;
+	string nomFichier;	//HD.DH
+	fstream fichierLecture;
 	ofstream fichierEcriture;
 public:
 	DisqueDur() {
@@ -76,6 +75,10 @@ void UpdateScreen() {
 
 void read(string nomFichier, fpos_t position, int nbChar, string TampLecture) {
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
+	for (int i = FAT; i < 256; i++){
+		readBlock(252,);
+	}
+	
 }
 
 void write(string nomFichier, fpos_t position, int nbChar, string TampLecture) {
