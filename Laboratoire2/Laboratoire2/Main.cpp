@@ -3,7 +3,9 @@
 #include <fstream>
 #include <vector>
 #include <array>
+#include <string>
 using namespace std;
+
 
 #define CHAR unsigned char
 
@@ -13,30 +15,28 @@ private:
 	const CHAR FAT = 252;
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
-	string nomFichier;	//HD.DH
-	fstream fichierLecture;
-	ofstream fichierEcriture;
+	fstream hd;
 public:
-	DisqueDur() {
-
-	}
-
 	DisqueDur(string fichier) {
-		nomFichier = fichier;
+		hd.open(fichier, fstream::in | fstream::out | fstream::binary);
+		if (!hd.is_open) {
+			string erreur = "Erreur lors de l'ouverture de " + fichier;
+			cout << erreur;
+		}
 	}
 
 	~DisqueDur() {
 
 	}
 
-	void readBlock(int numBlock, string tampLecture);
-	void writeBlock(int numBloc, string tampLecture);
+	void readBlock(CHAR numBlock, CHAR* tampLecture);
+	void writeBlock(CHAR numBloc, CHAR* tampLecture);
 };
 
 void UpdateFiles();
 void UpdateScreen();
-void read(string nomFichier, fpos_t position, int nbChar, string TampLecture);
-void write(string nomFichier, fpos_t position, int nbChar, string TampLecture);
+void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
+void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void deleteEOF(string nomFichier, fpos_t position);
 
 int main() {
@@ -73,15 +73,11 @@ void UpdateScreen() {
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(string nomFichier, fpos_t position, int nbChar, string TampLecture) {
+void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
-	for (int i = FAT; i < 256; i++){
-		readBlock(252,);
-	}
-	
 }
 
-void write(string nomFichier, fpos_t position, int nbChar, string TampLecture) {
+void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
 }
 
@@ -91,10 +87,10 @@ void deleteEOF(string nomFichier, fpos_t position) {
 
 // FONCTIONS DU DISQUE DUR
 
-void DisqueDur::readBlock(int numBlock, string tampLecture) {
-
+void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
+	//hd
 }
 
-void DisqueDur::writeBlock(int numBloc, string tampLecture) {
+void DisqueDur::writeBlock(CHAR numBloc, CHAR* tampLecture) {
 
 }
