@@ -5,50 +5,9 @@
 #include <array>
 using namespace std;
 
-class Block {
-private:
-	// int position;
-	int positionSuivant; // position du bloc suivant
-	fpos_t positionFichier; // adresse
-public:
-	Block() {
-
-	}
-
-	Block(int posSuivant, fpos_t posFichier) {
-		positionSuivant = posSuivant;
-		positionFichier = posFichier;
-	}
-
-	~Block() {
-
-	}
-};
-
-class Fichier {
-private:
-	int positionPremierBlock;
-	Block* premierBlock;
-	string nomFichier;
-public:
-	Fichier() {
-
-	}
-
-	Fichier(int positionPremierBlock, Block* premier, string fichier) {
-		premierBlock = premier;
-		nomFichier = fichier;
-	}
-
-	~Fichier() {
-
-	}
-};
-
 class DisqueDur{
 private:
-	vector<Fichier*> listeFichier;
-	array<Block*,256> FAT8; // Votre code implante une FAT-8
+	array<int,256> FAT8; // Votre code implante une FAT-8
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
 	string nomFichier;
