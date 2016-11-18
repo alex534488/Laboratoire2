@@ -6,13 +6,13 @@
 #include <string>
 using namespace std;
 
-
 #define CHAR unsigned char
+
+const CHAR bitMap = 251;
+const CHAR FAT = 252;
 
 class DisqueDur{
 private:
-	const CHAR bitMap = 251;
-	const CHAR FAT = 252;
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
 	fstream hd;
@@ -74,7 +74,13 @@ void UpdateScreen() {
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
 void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+	CHAR premierBlock;
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
+	premierBlock = FindFichier(nomFichier);
+}
+
+CHAR FindFichier(string nomFichier) {
+	for(CHAR i = )
 }
 
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
@@ -94,3 +100,6 @@ void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
 void DisqueDur::writeBlock(CHAR numBloc, CHAR* tampLecture) {
 
 }
+
+// ouput seekp
+// input seekg
