@@ -31,8 +31,8 @@ public:
 
 	void readBlock(CHAR numBlock, CHAR* tampLecture);
 	void writeBlock(CHAR numBlock, CHAR* tampLecture);
-	CHAR* GetBlockLibre();
-	bool IsBlockLibre(CHAR* numBlock);
+	CHAR GetBlockLibre();
+	bool IsBlockLibre(CHAR numBlock);
 };
 
 void UpdateFiles();
