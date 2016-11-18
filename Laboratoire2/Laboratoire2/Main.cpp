@@ -9,6 +9,7 @@ using namespace std;
 #define CHAR unsigned char
 const CHAR bitMap = 251;
 const CHAR FAT = 252;
+const int blockSize = 64;
 
 const CHAR bitMap = 251;
 const CHAR FAT = 252;
@@ -32,7 +33,9 @@ public:
 	}
 
 	void readBlock(CHAR numBlock, CHAR* tampLecture);
-	void writeBlock(CHAR numBloc, CHAR* tampLecture);
+	void writeBlock(CHAR numBlock, CHAR* tampLecture);
+	CHAR GetBlockLibre();
+	bool IsBlockLibre(CHAR numBlock);
 };
 
 void UpdateFiles();
@@ -110,15 +113,15 @@ void deleteEOF(string nomFichier, fpos_t position) {
 // FONCTIONS DU DISQUE DUR
 
 void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
-	streampos pos = numBlock * 64;
+	streampos pos = numBlock * blockSize;
 	hd.seekg(pos);
-	hd.read((char*)tampLecture, 64);
+	hd.read((char*)tampLecture, blockSize);
 }
 
 void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
-	streampos pos = numBlock * 64;
+	streampos pos = numBlock * blockSize;
 	hd.seekp(pos);
-	hd.write((char*)tampLecture, 64);
+	hd.write((char*)tampLecture, blockSize);
 
 }
 
