@@ -7,6 +7,8 @@
 using namespace std;
 
 #define CHAR unsigned char
+const CHAR bitMap = 251;
+const CHAR FAT = 252;
 
 const CHAR bitMap = 251;
 const CHAR FAT = 252;
@@ -39,7 +41,11 @@ void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void deleteEOF(string nomFichier, fpos_t position);
 
+DisqueDur* dur;
+
 int main() {
+	dur = new DisqueDur("hd.dh");
+
 	int timer = 0;
 	string buffer;
 
@@ -94,10 +100,15 @@ void deleteEOF(string nomFichier, fpos_t position) {
 // FONCTIONS DU DISQUE DUR
 
 void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
-	//hd
+	streampos pos = numBlock * 64;
+	hd.seekg(pos);
+	hd.read((char*)tampLecture, 64);
 }
 
-void DisqueDur::writeBlock(CHAR numBloc, CHAR* tampLecture) {
+void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
+	streampos pos = numBlock * 64;
+	hd.seekp(pos);
+	hd.write((char*)tampLecture, 64);
 
 }
 
