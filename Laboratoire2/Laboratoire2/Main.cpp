@@ -5,12 +5,16 @@
 #include <array>
 using namespace std;
 
+
+#define CHAR unsigned char
+
 class DisqueDur{
 private:
-	array<int,256> FAT8; // Votre code implante une FAT-8
+	const CHAR bitMap = 251;
+	const CHAR FAT = 252;
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
-	string nomFichier;
+	string nomFichier;//HD.DH
 	ifstream fichierLecture;
 	ofstream fichierEcriture;
 public:
