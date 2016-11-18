@@ -7,8 +7,8 @@ using namespace std;
 class Block {
 private:
 	// int position;
-	int positionSuivant;
-	fpos_t positionFichier;
+	int positionSuivant; // position du bloc suivant
+	fpos_t positionFichier; // adresse
 public:
 	Block() {
 
@@ -34,7 +34,7 @@ public:
 
 	}
 
-	Fichier(Block* premier, string fichier) {
+	Fichier(int positionPremierBlock, Block* premier, string fichier) {
 		premierBlock = premier;
 		nomFichier = fichier;
 	}
