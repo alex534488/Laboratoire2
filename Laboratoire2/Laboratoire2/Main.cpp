@@ -35,8 +35,8 @@ public:
 
 void UpdateFiles();
 void UpdateScreen();
-void read(string nomFichier, fpos_t position, CHAR nbChar, CHAR* TampLecture);
-void write(string nomFichier, fpos_t position, CHAR nbChar, CHAR* TampLecture);
+void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
+void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void deleteEOF(string nomFichier, fpos_t position);
 
 int main() {
@@ -73,11 +73,11 @@ void UpdateScreen() {
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(string nomFichier, fpos_t position, CHAR nbChar, CHAR* TampLecture) {
+void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
 }
 
-void write(string nomFichier, fpos_t position, CHAR nbChar, CHAR* TampLecture) {
+void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
 }
 
