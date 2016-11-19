@@ -94,8 +94,8 @@ CHAR FindFichier(CHAR* nomFichier) {
 	for (CHAR i = FAT; i < 256; i++) {
 		dur->readBlock(i, blockBuffer1);
 		for (int j = 0; j < blockSize; j++) {
-			dur->readBlock(blockBuffer1[j], blockBuffer2)
-			if ( ) {
+			dur->readBlock(blockBuffer1[j], blockBuffer2);
+			if(nomFichier == blockBuffer2) {
 
 			}
 		}
