@@ -6,13 +6,11 @@
 #include <string>
 using namespace std;
 
+
 #define CHAR unsigned char
 const CHAR bitMap = 251;
 const CHAR FAT = 252;
 const int blockSize = 64;
-
-const CHAR bitMap = 251;
-const CHAR FAT = 252;
 
 class DisqueDur{
 private:
@@ -36,13 +34,15 @@ public:
 	void writeBlock(CHAR numBlock, CHAR* tampLecture);
 	CHAR GetBlockLibre();
 	bool IsBlockLibre(CHAR numBlock);
+	CHAR ReadFAT(CHAR numBlock);
+	CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
 };
 
 void UpdateFiles();
 void UpdateScreen();
-void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
-void write(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
-void deleteEOF(CHAR* nomFichier, fpos_t position);
+void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
+void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
+void deleteEOF(string nomFichier, fpos_t position);
 
 DisqueDur* dur;
 
@@ -82,21 +82,15 @@ void UpdateScreen() {
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
-	CHAR premierBlock;
+void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
-	premierBlock = FindFichier(nomFichier);
 }
 
-CHAR FindFichier(CHAR* nomFichier) {
-	//
-}
-
-void write(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
 }
 
-void deleteEOF(CHAR* nomFichier, fpos_t position) {
+void deleteEOF(string nomFichier, fpos_t position) {
 	// ouvre un fichier existant et le coupe à "position" puis le referme. Si position est 0, le fichier est effacé.
 }
 
@@ -115,5 +109,40 @@ void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
 
 }
 
-// ouput seekp
-// input seekg
+CHAR DisqueDur::GetBlockLibre()
+{
+	CHAR* map = (CHAR*)malloc(blockSize);
+	readBlock(bitMap, map);
+
+	return CHAR();
+}
+
+bool DisqueDur::IsBlockLibre(CHAR numBlock)
+{
+	CHAR cell = numBlock / 8;
+	CHAR bit = numBlock % 8;
+
+	CHAR result = ReadCellFromBlock(bitMap, cell);
+
+	return ((result >> bit) & 0x01) == 0;
+}
+
+CHAR DisqueDur::ReadFAT(CHAR numBlock)
+{
+	CHAR block = (numBlock / blockSize) + FAT;
+	CHAR index = numBlock % blockSize;
+	CHAR result = ReadCellFromBlock(block, index);
+	return result;
+}
+
+CHAR DisqueDur::ReadCellFromBlock(CHAR numBlock, CHAR numCell)
+{
+	CHAR* row = new CHAR[blockSize];
+
+	readBlock(numBlock, row);
+
+	CHAR result = row[numCell];
+
+	delete row;
+	return result;
+}
