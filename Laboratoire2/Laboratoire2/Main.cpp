@@ -36,6 +36,7 @@ public:
 	bool IsBlockLibre(CHAR numBlock);
 	CHAR ReadFAT(CHAR numBlock);
 	CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
+	void SetBitMap(CHAR numBlock, bool state);
 };
 
 void UpdateFiles();
@@ -151,6 +152,7 @@ void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
 	hd.seekp(pos);
 	hd.write((char*)tampLecture, blockSize);
 
+	SetBitMap(numBlock, true);
 }
 
 CHAR DisqueDur::GetBlockLibre()
@@ -158,25 +160,34 @@ CHAR DisqueDur::GetBlockLibre()
 	CHAR* map = (CHAR*)malloc(blockSize);
 	readBlock(bitMap, map);
 	
-	int i = 0;
+	int cell = 0;
 	//Trouve la cell avec au moins un bit a 0
-	for ( i = 0; i < 32; i++) {
-		if (map[i] != 255) break;
+	for ( cell = 0; cell < 32; cell++) {
+		if (map[cell] != 255) break;
 	}
 
-	if (i == 32)
+	if (cell == 32)
+	{
+		cout << "Disque dur plein !" << endl;
+		delete map;
+		throw("Disque dur plein !");
+	}
+
+	CHAR result = 255;
+	for (int bit = 0; bit < 8; bit++) {
+		if ((map[cell] >> bit & 0x01) == 0) {
+			result = (cell * 8) + bit;
+		}
+	}
+
+	delete map;
+
+	if (result >= bitMap)
 	{
 		cout << "Disque dur plein !" << endl;
 		throw("Disque dur plein !");
 	}
-
-	for (int u = 0; u < 8; u++) {
-		if ((map[i] >> u & 0x01) == 0) {
-			return (i * 8) + u;
-		}
-	}
-	cout << "Woh, ne devrais pas arriver ici !" << endl;
-	return 0x255;
+	return result;
 }
 
 bool DisqueDur::IsBlockLibre(CHAR numBlock)
@@ -207,4 +218,26 @@ CHAR DisqueDur::ReadCellFromBlock(CHAR numBlock, CHAR numCell)
 
 	delete row;
 	return result;
+}
+
+void DisqueDur::SetBitMap(CHAR numBlock, bool state)
+{
+	if (numBlock >= bitMap)
+	{
+		cout << "Erreur, ne peut pas set un bit dans la bitMap > 250" << endl;
+		return;
+	}
+	CHAR* map = (CHAR*)malloc(blockSize);
+	readBlock(bitMap, map);
+
+	CHAR cell = numBlock / 8;
+	CHAR bit = numBlock % 8;
+
+	if(state)
+		map[cell] |= 1 << bit; //Met le bit a 1
+	else
+		map[cell] &= ~(1 << bit); //Met le bit a 0
+	
+	writeBlock(bitMap, map);
+	delete map;
 }
