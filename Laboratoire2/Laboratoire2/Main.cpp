@@ -85,7 +85,7 @@ void UpdateFiles() {
 	CHAR* buffer = new CHAR[maxLenght];
 	
 	// Ecriture d'un nouveau fichier
-	write(CreateRandomFileName(alphabet), 0, , buffer);
+	write(CreateRandomFileName(alphabet), 0, WriteRandomStuff(maxLenght, alphabet, buffer), buffer);
 	
 	// Supprimer un fichier
 	deleteEOF(FindRandomFileName(), 0);
