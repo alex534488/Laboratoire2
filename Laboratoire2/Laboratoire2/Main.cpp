@@ -122,8 +122,8 @@ CHAR DisqueDur::GetBlockLibre()
 
 	if (i == 32)
 	{
-		cout << "Disk dur plein !" << endl;
-		throw("Disk dur plein !");
+		cout << "Disque dur plein !" << endl;
+		throw("Disque dur plein !");
 	}
 
 	for (int u = 0; u < 8; u++) {
