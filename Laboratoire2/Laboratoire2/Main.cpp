@@ -22,7 +22,7 @@ public:
 		hd.open(fichier, fstream::in | fstream::out | fstream::binary);
 		if (!hd.is_open) {
 			string erreur = "Erreur lors de l'ouverture de " + fichier;
-			cout << erreur;
+			cout << erreur << endl;
 		}
 	}
 
@@ -138,8 +138,26 @@ CHAR DisqueDur::GetBlockLibre()
 {
 	CHAR* map = (CHAR*)malloc(blockSize);
 	readBlock(bitMap, map);
+	
+	int i = 0;
+	//Trouve la cell avec au moins un bit a 0
+	for ( i = 0; i < 32; i++) {
+		if (map[i] != 255) break;
+	}
 
-	return CHAR();
+	if (i == 32)
+	{
+		cout << "Disque dur plein !" << endl;
+		throw("Disque dur plein !");
+	}
+
+	for (int u = 0; u < 8; u++) {
+		if ((map[i] >> u & 0x01) == 0) {
+			return (i * 8) + u;
+		}
+	}
+	cout << "Woh, ne devrais pas arriver ici !" << endl;
+	return 0x255;
 }
 
 bool DisqueDur::IsBlockLibre(CHAR numBlock)
