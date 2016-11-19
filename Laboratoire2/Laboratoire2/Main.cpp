@@ -38,17 +38,6 @@ public:
 
 	void readBlock(CHAR numBlock, CHAR* tampLecture);
 	void writeBlock(CHAR numBlock, CHAR* tampLecture);
-	CHAR GetBlockLibre();
-	bool IsBlockLibre(CHAR numBlock);
-	CHAR ReadFAT(CHAR numBlock);
-	CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
-	void SetBitMap(CHAR numBlock, bool state);
-	int FileLenght(CHAR* nomFichier);
-	CHAR* CreateRandomFileName(CHAR* alphabet);
-	CHAR WriteRandomStuff(int nbCharMax, CHAR* alphabet, CHAR* & buffer);
-	CHAR* FindRandomFileName();
-	int CountNbFiles();
-	CHAR FindFichier(CHAR* nomFichier, CHAR start);
 };
 
 void UpdateFiles();
@@ -296,13 +285,13 @@ void deleteEOF(CHAR* nomFichier, CHAR position) {
 
 // FONCTIONS DU DISQUE DUR
 
-void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
+void readBlock(CHAR numBlock, CHAR* tampLecture) {
 	streampos pos = numBlock * blockSize;
 	hd.seekg(pos);
 	hd.read((char*)tampLecture, blockSize);
 }
 
-void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
+void writeBlock(CHAR numBlock, CHAR* tampLecture) {
 	streampos pos = numBlock * blockSize;
 	hd.seekp(pos);
 	hd.write((char*)tampLecture, blockSize);
@@ -310,7 +299,7 @@ void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
 	SetBitMap(numBlock, true);
 }
 
-CHAR DisqueDur::GetBlockLibre()
+CHAR GetBlockLibre()
 {
 	CHAR* map = (CHAR*)malloc(blockSize);
 	readBlock(bitMap, map);
@@ -345,7 +334,7 @@ CHAR DisqueDur::GetBlockLibre()
 	return result;
 }
 
-bool DisqueDur::IsBlockLibre(CHAR numBlock)
+bool IsBlockLibre(CHAR numBlock)
 {
 	CHAR cell = numBlock / 8;
 	CHAR bit = numBlock % 8;
@@ -355,7 +344,7 @@ bool DisqueDur::IsBlockLibre(CHAR numBlock)
 	return ((result >> bit) & 0x01) == 0;
 }
 
-CHAR DisqueDur::ReadFAT(CHAR numBlock)
+CHAR ReadFAT(CHAR numBlock)
 {
 	CHAR block = (numBlock / blockSize) + FAT;
 	CHAR index = numBlock % blockSize;
@@ -363,7 +352,7 @@ CHAR DisqueDur::ReadFAT(CHAR numBlock)
 	return result;
 }
 
-CHAR DisqueDur::ReadCellFromBlock(CHAR numBlock, CHAR numCell)
+CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell)
 {
 	CHAR* row = new CHAR[blockSize];
 
@@ -375,7 +364,7 @@ CHAR DisqueDur::ReadCellFromBlock(CHAR numBlock, CHAR numCell)
 	return result;
 }
 
-void DisqueDur::SetBitMap(CHAR numBlock, bool state)
+void SetBitMap(CHAR numBlock, bool state)
 {
 	if (numBlock >= bitMap)
 	{
