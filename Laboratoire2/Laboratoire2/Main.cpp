@@ -82,8 +82,33 @@ void UpdateScreen() {
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+	CHAR premierBlock;
 	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
+	premierBlock = FindFichier(nomFichier, 0);
+}
+
+CHAR FindFichier(CHAR* nomFichier, CHAR start) {
+	CHAR* block = new CHAR[blockSize];
+	CHAR* blockFichier = new CHAR[blockSize];
+	bool keepgoing = true;
+
+	CHAR nextBlock = start;
+
+	while (keepgoing) {
+		dur->readBlock(nextBlock, block);
+		for (int i = 0; i < blockSize; i++) {
+			if (block[i] == 255) {
+				keepgoing = false;
+				break;
+			} else {
+				dur->readBlock(block[i], blockFichier);
+				if (blockFichier == nomFichier) return block[i];
+			}
+		}
+		CHAR nextBlock = dur->ReadFAT(nextBlock);
+	}
+	//throw 
 }
 
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
