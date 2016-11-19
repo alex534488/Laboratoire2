@@ -4,12 +4,18 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <stdio.h>
+#include <time.h>
+#include <math.h>
 using namespace std;
 
+time_t t = time(NULL);
+tm* timePtr = localtime(&t);
 
 #define CHAR unsigned char
 const CHAR bitMap = 251;
 const CHAR FAT = 252;
+const CHAR debutListeFichier = 0;
 const int blockSize = 64;
 
 class DisqueDur{
@@ -37,6 +43,12 @@ public:
 	CHAR ReadFAT(CHAR numBlock);
 	CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
 	void SetBitMap(CHAR numBlock, bool state);
+	int FileLenght(CHAR* nomFichier);
+	CHAR* CreateRandomFileName(CHAR* alphabet);
+	CHAR WriteRandomStuff(int nbCharMax, CHAR* alphabet, CHAR* & buffer);
+	CHAR* FindRandomFileName();
+	int CountNbFiles();
+	CHAR FindFichier(CHAR* nomFichier, CHAR start);
 };
 
 void UpdateFiles();
@@ -68,43 +80,179 @@ int main() {
 // FONCTIONS MAIN
 
 void UpdateFiles() {
-	/*
-	Votre programme principal écrit aléatoirement des fichiers nommées a.txt, b.txt, etc. qui contiennent des a,b, c, etc. Il efface aléatoirement des fichiers et des fins de fichiers.
-	*/
+	int maxLenght = 100;
+	CHAR alphabet[] = "abcdefghijklmnopqrstvwxyz";
+	CHAR* buffer = new CHAR[maxLenght];
+	
+	// Ecriture d'un nouveau fichier
+	write(CreateRandomFileName(alphabet), 0, , buffer);
+	
+	// Supprimer un fichier
+	deleteEOF(FindRandomFileName(), 0);
+
+	// Ecriture dans un fichier existant
+	write(FindRandomFileName(), 0, WriteRandomStuff(maxLenght, alphabet, buffer),buffer);
+
+	// Effacement de la fin d'un fichier
+	CHAR* fileName = FindRandomFileName();
+	deleteEOF(fileName, rand() % FileLenght(fileName));
+}
+
+int FileLenght(CHAR* nomFichier) {
+	// Trouve la longueur d'un fichier en octet
+} // A FAIRE
+
+CHAR* CreateRandomFileName(CHAR* alphabet) {
+	// Creer un nom de fichier inexistant
+	CHAR* nomFichier = new CHAR[blockSize];
+	for (int j = 0; j < blockSize; j++) {
+		nomFichier[j] = alphabet[rand() % 26];
+		if (-1 == FindFichier(nomFichier, debutListeFichier)) break;
+	}
+	return nomFichier;
+}
+
+CHAR WriteRandomStuff(int nbCharMax, CHAR* alphabet, CHAR* & buffer) {
+	int textLenght = rand() % nbCharMax;
+	for (int i = 0; i < textLenght + 1; i++) {
+		buffer[i] = alphabet[rand() % 26];
+	}
+	return textLenght;
+}
+
+CHAR* FindRandomFileName() {
+	// Trouver un fichier
+	CHAR* nomFichier = new CHAR[blockSize];
+	CHAR* numBlock = new CHAR[blockSize];
+	int nbFiles = CountNbFiles();
+	int nbBlocks = floor(nbFiles / 64);
+	CHAR block = rand() % nbBlocks;
+	int nbCells = nbFiles - ((nbBlocks - block) * 64);
+	CHAR cell = rand() % nbCells;
+
+	dur->readBlock(block, numBlock);
+	dur->readBlock(numBlock[cell], nomFichier);
+
+	return nomFichier;
+}
+
+int CountNbFiles() {
+	bool keepgoing = true;
+	int nbFiles = 0;
+	CHAR* block = new CHAR[blockSize];
+	CHAR nextBlock = 0;
+
+	while (keepgoing) {
+		dur->readBlock(nextBlock, block);
+		for (int i = 0; i < blockSize; i++) {
+			if (block[i] == 255) {
+				// Fin de la liste des fichiers
+				keepgoing = false;
+				break;
+			}
+			else {
+				nbFiles++;
+			}
+		}
+		nextBlock = dur->ReadFAT(nextBlock);
+	}
+	return nbFiles;
 }
 
 void UpdateScreen() {
+	CHAR* block = new CHAR[blockSize];
+	CHAR* buffer = new CHAR[blockSize];
+	CHAR* blockFichier = new CHAR[blockSize];
+	CHAR nextBlock = 0;
+	CHAR nextFileBlock;
+	bool keepgoing = true;
+	bool endOfFile = false;
+	
 	/*
-	L'ensemble de son fichier HD.DH soit 256 lettres majuscules ou minuscules selon que le bloc est plein ou incomplet. 
+	L'ensemble de son fichier HD.DH soit 256 lettres majuscules ou minuscules selon que le bloc est plein ou incomplet.
 	Par exemple, écrire un A (majuscule) pour représenter un bloc plein de "a" et un a (minuscule) pour un bloc incomplet de "a".
-	La liste des fichiers et des blocs qu'ils occupent.
 	*/
+	for (int i = 0; i < 251; i++) {
+		dur->readBlock((CHAR)i, buffer);
+		// es ce que buffer est plein ou incomplet?
+		//plein
+			cout << " Bloc " << i << ": A |";
+		// incomplet
+			cout << " Bloc " << i << ": a |";
+		// vide
+			cout << " Bloc " << i << ": 0 |";
+	}
+
+	//La liste des fichiers et des blocs qu'ils occupent.
+	cout << "\n\nListe des fichiers : ";
+
+	while (keepgoing) {
+		dur->readBlock(nextBlock, block);
+		for (int i = 0; i < blockSize; i++) {
+			if (block[i] == 255) {
+				// Fin de la liste des fichiers
+				keepgoing = false;
+				break;
+			}
+			else {
+				dur->readBlock(block[i], blockFichier);
+				cout << blockFichier << ", ";
+				nextFileBlock = dur->ReadFAT(block[i]);
+				if (nextFileBlock == 0) {
+					cout << nextFileBlock << "|";
+					endOfFile = true;
+				}
+				while (!endOfFile) {
+					cout << nextFileBlock << "->";
+					nextFileBlock = dur->ReadFAT(nextFileBlock);
+					if (nextFileBlock == 0) endOfFile = true;
+				}
+				endOfFile = false;
+				cout << "|";
+			}
+		}
+		nextBlock = dur->ReadFAT(nextBlock);
+	}
+	return;
 }
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) { // ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
+// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
+void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 	CHAR currentBlock;
+	int currentChar = 0;
 	bool keepgoing = true;
-	fpos_t currentPos = position;
+	CHAR currentPos = position;
+	CHAR* buffer = new CHAR[blockSize];
 
-	try {
-		currentBlock = FindFichier(nomFichier, 0);
+	try 
+	{
+		currentBlock = FindFichier(nomFichier, debutListeFichier);
+	
+		for (int j = 0; keepgoing; j++) {
+
+			dur->readBlock(currentBlock, buffer);
+
+			for (int i = 0; i < 64; i++) {
+				if (((j * 64 + i) >= currentPos) && nbChar <= ((j * 64 + i) - position)) {
+					// on a trouve la position!
+					TampLecture[currentChar] = buffer[i];
+					currentChar++;
+				}
+				else if (currentChar > nbChar) {
+					return;
+				}
+			}
+
+			currentBlock = dur->ReadFAT(currentBlock);
+		}
+	
+		throw("Impossible de trouve la position");
+
 	}
 	catch (string error) {
 		cout << error << endl;
-	}
-	
-	for (int j = 0; keepgoing; j++) {
-		for (int i = 0; i < 64; i++) {
-			if ((j * 64 + i) == currentPos) {
-				// on a trouve la position!
-				for (int k = 0; k < nbChar; k++) {
-
-				}
-			}
-		}
-		currentBlock = dur->ReadFAT(currentBlock);
 	}
 }
 
@@ -128,14 +276,21 @@ CHAR FindFichier(CHAR* nomFichier, CHAR start) {
 		}
 		CHAR nextBlock = dur->ReadFAT(nextBlock);
 	}
+
 	throw("Aucun fichier trouvé !");
+
+	return -1;
 }
 
-void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
+void write(CHAR* nomFichier, CHAR position, int nbChar, CHAR* TampLecture) {
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
+
+	// Si le fichier n'existe pas deja, creer sa referance avec son nom 
+
+	// position 0 correspond a apres la reference
 }
 
-void deleteEOF(string nomFichier, fpos_t position) {
+void deleteEOF(CHAR* nomFichier, CHAR position) {
 	// ouvre un fichier existant et le coupe à "position" puis le referme. Si position est 0, le fichier est effacé.
 }
 
