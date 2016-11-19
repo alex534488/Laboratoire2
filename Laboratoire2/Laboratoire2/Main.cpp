@@ -116,24 +116,33 @@ CHAR DisqueDur::GetBlockLibre()
 	CHAR* map = (CHAR*)malloc(blockSize);
 	readBlock(bitMap, map);
 	
-	int i = 0;
+	int cell = 0;
 	//Trouve la cell avec au moins un bit a 0
-	for ( i = 0; i < 32; i++) {
-		if (map[i] != 255) break;
+	for ( cell = 0; cell < 32; cell++) {
+		if (map[cell] != 255) break;
 	}
 
-	if (i == 32)
+	if (cell == 32)
+	{
+		cout << "Disque dur plein !" << endl;
+		delete map;
+		throw("Disque dur plein !");
+	}
+
+	CHAR result = 255;
+	for (int bit = 0; bit < 8; bit++) {
+		if ((map[cell] >> bit & 0x01) == 0) {
+			result = (cell * 8) + bit;
+		}
+	}
+
+	delete map;
+
+	if (result >= bitMap)
 	{
 		cout << "Disque dur plein !" << endl;
 		throw("Disque dur plein !");
 	}
-	CHAR result = 255;
-	for (int u = 0; u < 8; u++) {
-		if ((map[i] >> u & 0x01) == 0) {
-			result = (i * 8) + u;
-		}
-	}
-	delete map;
 	return result;
 }
 
@@ -169,6 +178,11 @@ CHAR DisqueDur::ReadCellFromBlock(CHAR numBlock, CHAR numCell)
 
 void DisqueDur::SetBitMap(CHAR numBlock, bool state)
 {
+	if (numBlock >= bitMap)
+	{
+		cout << "Erreur, ne peut pas set un bit dans la bitMap > 250" << endl;
+		return;
+	}
 	CHAR* map = (CHAR*)malloc(blockSize);
 	readBlock(bitMap, map);
 
