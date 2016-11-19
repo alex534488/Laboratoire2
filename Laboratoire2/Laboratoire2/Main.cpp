@@ -34,6 +34,8 @@ public:
 	void writeBlock(CHAR numBlock, CHAR* tampLecture);
 	CHAR GetBlockLibre();
 	bool IsBlockLibre(CHAR numBlock);
+	CHAR ReadFAT(CHAR numBlock);
+	CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
 };
 
 void UpdateFiles();
@@ -105,4 +107,42 @@ void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
 	hd.seekp(pos);
 	hd.write((char*)tampLecture, blockSize);
 
+}
+
+CHAR DisqueDur::GetBlockLibre()
+{
+	CHAR* map = (CHAR*)malloc(blockSize);
+	readBlock(bitMap, map);
+
+	return CHAR();
+}
+
+bool DisqueDur::IsBlockLibre(CHAR numBlock)
+{
+	CHAR cell = numBlock / 8;
+	CHAR bit = numBlock % 8;
+
+	CHAR result = ReadCellFromBlock(bitMap, cell);
+
+	return ((result >> bit) & 0x01) == 0;
+}
+
+CHAR DisqueDur::ReadFAT(CHAR numBlock)
+{
+	CHAR block = (numBlock / blockSize) + FAT;
+	CHAR index = numBlock % blockSize;
+	CHAR result = ReadCellFromBlock(block, index);
+	return result;
+}
+
+CHAR DisqueDur::ReadCellFromBlock(CHAR numBlock, CHAR numCell)
+{
+	CHAR* row = new CHAR[blockSize];
+
+	readBlock(numBlock, row);
+
+	CHAR result = row[numCell];
+
+	delete row;
+	return result;
 }
