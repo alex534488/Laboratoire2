@@ -82,10 +82,29 @@ void UpdateScreen() {
 
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
-void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
-	CHAR premierBlock;
-	// ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
-	premierBlock = FindFichier(nomFichier, 0);
+void read(CHAR* nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) { // ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
+	CHAR currentBlock;
+	bool keepgoing = true;
+	fpos_t currentPos = position;
+
+	try {
+		currentBlock = FindFichier(nomFichier, 0);
+	}
+	catch (string error) {
+		cout << error << endl;
+	}
+	
+	for (int j = 0; keepgoing; j++) {
+		for (int i = 0; i < 64; i++) {
+			if ((j * 64 + i) == currentPos) {
+				// on a trouve la position!
+				for (int k = 0; k < nbChar; k++) {
+
+				}
+			}
+		}
+		currentBlock = dur->ReadFAT(currentBlock);
+	}
 }
 
 CHAR FindFichier(CHAR* nomFichier, CHAR start) {
@@ -108,7 +127,7 @@ CHAR FindFichier(CHAR* nomFichier, CHAR start) {
 		}
 		CHAR nextBlock = dur->ReadFAT(nextBlock);
 	}
-	//throw 
+	throw("Aucun fichier trouvé !");
 }
 
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture) {
