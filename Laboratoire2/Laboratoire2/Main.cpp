@@ -325,22 +325,31 @@ CHAR FindFichier(CHAR* nomFichier) {
 
 	while (keepgoing) {
 		dur->readBlock(nextBlock, block);
+
+		//Check tous les fichier du block courent
 		for (int i = 0; i < blockSize; i++) {
-			if (block[i] == 255) {
-				keepgoing = false;
-				break;
+			if (block[i] == BLOCKFAULT) {
+				delete block;
+				delete blockFichier;
+				return BLOCKFAULT;
 			}
-			else {
-				dur->readBlock(block[i], blockFichier);
-				if (Compare(blockFichier, nomFichier, nomFichierSize)) return block[i];
+			dur->readBlock(block[i], blockFichier);
+			if (Compare(blockFichier, nomFichier, nomFichierSize)) {
+				delete block;
+				delete blockFichier;
+				return block[i];
 			}
 		}
+
+		//Pas dans ce block ? next one!
 		CHAR nextBlock = ReadFAT(nextBlock);
+
+		if (nextBlock == BLOCKFAULT) break;
 	}
 
-	//cout << "Aucun fichier trouvé !" << endl;
-
-	return -1;
+	delete block;
+	delete blockFichier;
+	return BLOCKFAULT;
 }
 
 void write(CHAR* nomFichier, CHAR position, int nbChar, CHAR* TampLecture) {
