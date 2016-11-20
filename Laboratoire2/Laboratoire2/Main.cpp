@@ -13,12 +13,14 @@ time_t t = time(NULL);
 tm* timePtr = localtime(&t);
 
 #define CHAR unsigned char
-const CHAR bitMap = 251;
-const CHAR FAT = 252;
-const CHAR debutListeFichier = 0;
-const int blockSize = 64;
+#define bitMap 251
+#define FAT 252
+#define debutListeFichier 0
+#define blockSize 64
+#define nomFichierSize 63
+#define BLOCKFAULT 255
 
-class DisqueDur{
+class DisqueDur {
 private:
 
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
@@ -72,55 +74,113 @@ void UpdateFiles() {
 	int maxLenght = 100;
 	CHAR alphabet[] = "abcdefghijklmnopqrstvwxyz";
 	CHAR* buffer = new CHAR[maxLenght];
-	
-	// Ecriture d'un nouveau fichier
-	write(CreateRandomFileName(alphabet), 0, WriteRandomStuff(maxLenght, alphabet, buffer), buffer);
-	
-	// Supprimer un fichier
-	deleteEOF(FindRandomFileName(), 0);
 
-	// Ecriture dans un fichier existant
-	write(FindRandomFileName(), 0, WriteRandomStuff(maxLenght, alphabet, buffer),buffer);
+	int action = rand() % 4;
 
-	// Effacement de la fin d'un fichier
-	CHAR* fileName = FindRandomFileName();
-	deleteEOF(fileName, rand() % FileLenght(fileName));
+	switch (action)
+	{
+	default:
+	case 0:
+	{
+		// Ecriture d'un nouveau fichier
+		CHAR* nomFichier = GetRandomFileName(alphabet);
+		write(nomFichier, 0, WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
+		delete nomFichier;
+	}
+	break;
+	case 1:
+		// Supprimer un fichier
+		deleteEOF(FindRandomFileName(), 0);
+		break;
+	case 2:
+	{
+		CHAR* nomFichier = FindRandomFileName();
+		// Ecriture dans un fichier existant
+		write(nomFichier, 0, WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
+		delete nomFichier;
+	}
+	break;
+	case 3:
+	{
+		// Effacement de la fin d'un fichier
+		CHAR* nomFichier = FindRandomFileName();
+		deleteEOF(nomFichier, rand() % FileLenght(nomFichier));
+		delete nomFichier;
+	}
+	break;
+	}
+
+	delete buffer;
 }
 
 int FileLenght(CHAR* nomFichier) {
-	// Trouve la longueur d'un fichier en octet
-} // A FAIRE
 
-CHAR* CreateRandomFileName(CHAR* alphabet) {
-	// Creer un nom de fichier inexistant
-	CHAR* nomFichier = new CHAR[blockSize];
-	for (int j = 0; j < blockSize; j++) {
-		nomFichier[j] = alphabet[rand() % 26];
-		if (-1 == FindFichier(nomFichier, debutListeFichier)) break;
+	CHAR filePos = FindFichier(nomFichier);
+
+	if (filePos == -1) return;
+
+	//Grosser du dernier block ex: [64,64,64,21]  -> 21
+	CHAR grosseurDernierBlock = ReadCellFromBlock(filePos, blockSize - 1);
+
+	int quantitéDeBlockPlein = 0;
+
+	//Trouve la quantité de block plein (INCLUANT LE PREMIER)  ex: [64,64,64,21]  -> 3
+	CHAR next = filePos;
+	while (true)
+	{
+		next = ReadFAT(next);
+		if (next == 255) break;
+		quantitéDeBlockPlein++;
+	}
+
+	// Retourne la quantité totale ex: (3 * 64) + 21
+	return quantitéDeBlockPlein * blockSize + grosseurDernierBlock;
+}
+
+//A noter que si toute les lettre de l'alphabet son prise, plusieur fichier auront le nom z.txt
+CHAR* GetRandomFileName(CHAR* alphabet) {
+	//Toujours _.txt
+	CHAR* nomFichier = new CHAR[nomFichierSize];
+	nomFichier[1] = '.';
+	nomFichier[2] = 't';
+	nomFichier[3] = 'x';
+	nomFichier[4] = 't';
+
+	//Trouve une lettre non-utilisé
+	for (int i = 0; i < 26; i++) {
+		nomFichier[0] = alphabet[i];
+		if (FindFichier(nomFichier) == -1) break;
 	}
 	return nomFichier;
 }
 
-CHAR WriteRandomStuff(int nbCharMax, CHAR* alphabet, CHAR* & buffer) {
+int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer) {
 	int textLenght = rand() % nbCharMax;
-	for (int i = 0; i < textLenght + 1; i++) {
-		buffer[i] = alphabet[rand() % 26];
+
+	for (int i = 0; i < textLenght; i++) {
+		buffer[i] = laLettre;
 	}
 	return textLenght;
 }
 
+// Trouver un fichier
 CHAR* FindRandomFileName() {
-	// Trouver un fichier
-	CHAR* nomFichier = new CHAR[blockSize];
-	CHAR* numBlock = new CHAR[blockSize];
-	int nbFiles = CountNbFiles();
-	int nbBlocks = floor(nbFiles / 64);
+	//Trouve un bloc aléatoire du dossier racine
+	int nbCells = CountNbFiles();
+	int nbBlocks = floor(nbCells / 64);
 	CHAR block = rand() % nbBlocks;
-	int nbCells = nbFiles - ((nbBlocks - block) * 64);
-	CHAR cell = rand() % nbCells;
 
-	dur->readBlock(block, numBlock);
-	dur->readBlock(numBlock[cell], nomFichier);
+	//Trouve la quantité de cellule dans le block choisi
+	int nbDeCellsDansBlock = blockSize;
+	if (block == nbBlocks - 1) // Si le block est le dernier...
+		nbDeCellsDansBlock = nbCells % blockSize;
+
+	//Trouve une cellule aléatoire dans le block choisi
+	CHAR cell = rand() % nbDeCellsDansBlock;
+
+	//Lit le premier block du fichier, aka son nom
+	CHAR* nomFichier = new CHAR[blockSize];
+	dur->readBlock(ReadCellFromBlock(block, cell), nomFichier);
 
 	return nomFichier;
 }
@@ -129,22 +189,26 @@ int CountNbFiles() {
 	bool keepgoing = true;
 	int nbFiles = 0;
 	CHAR* block = new CHAR[blockSize];
+
 	CHAR nextBlock = 0;
 
 	while (keepgoing) {
+		keepgoing = false;
+
 		dur->readBlock(nextBlock, block);
+
+		//Compte tous les fichier dans le block en cours
 		for (int i = 0; i < blockSize; i++) {
-			if (block[i] == 255) {
-				// Fin de la liste des fichiers
-				keepgoing = false;
-				break;
-			}
-			else {
-				nbFiles++;
-			}
+			if (block[i] == BLOCKFAULT) break; // Si on arrive a un BLOCKFAULT (255), alors on stop
+			nbFiles++;
 		}
-		nextBlock = dur->ReadFAT(nextBlock);
+
+		// Si le prochain block n'est pas = BLOCKFAULT, alors il faut continuer
+		nextBlock = ReadFAT(nextBlock);
+		keepgoing = nextBlock != BLOCKFAULT;
 	}
+
+	delete block;
 	return nbFiles;
 }
 
@@ -156,20 +220,20 @@ void UpdateScreen() {
 	CHAR nextFileBlock;
 	bool keepgoing = true;
 	bool endOfFile = false;
-	
+
 	/*
 	L'ensemble de son fichier HD.DH soit 256 lettres majuscules ou minuscules selon que le bloc est plein ou incomplet.
 	Par exemple, écrire un A (majuscule) pour représenter un bloc plein de "a" et un a (minuscule) pour un bloc incomplet de "a".
 	*/
-	for (int i = 0; i < 251; i++) {
+	for (int i = 0; i < bitMap; i++) {
 		dur->readBlock((CHAR)i, buffer);
 		// es ce que buffer est plein ou incomplet?
 		//plein
-			cout << " Bloc " << i << ": A |";
+		cout << " Bloc " << i << ": A |";
 		// incomplet
-			cout << " Bloc " << i << ": a |";
+		cout << " Bloc " << i << ": a |";
 		// vide
-			cout << " Bloc " << i << ": 0 |";
+		cout << " Bloc " << i << ": 0 |";
 	}
 
 	//La liste des fichiers et des blocs qu'ils occupent.
@@ -186,21 +250,21 @@ void UpdateScreen() {
 			else {
 				dur->readBlock(block[i], blockFichier);
 				cout << blockFichier << ", ";
-				nextFileBlock = dur->ReadFAT(block[i]);
+				nextFileBlock = ReadFAT(block[i]);
 				if (nextFileBlock == 0) {
 					cout << nextFileBlock << "|";
 					endOfFile = true;
 				}
 				while (!endOfFile) {
 					cout << nextFileBlock << "->";
-					nextFileBlock = dur->ReadFAT(nextFileBlock);
+					nextFileBlock = ReadFAT(nextFileBlock);
 					if (nextFileBlock == 0) endOfFile = true;
 				}
 				endOfFile = false;
 				cout << "|";
 			}
 		}
-		nextBlock = dur->ReadFAT(nextBlock);
+		nextBlock = ReadFAT(nextBlock);
 	}
 	return;
 }
@@ -215,10 +279,10 @@ void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 	CHAR currentPos = position;
 	CHAR* buffer = new CHAR[blockSize];
 
-	try 
+	try
 	{
-		currentBlock = FindFichier(nomFichier, debutListeFichier);
-	
+		currentBlock = FindFichier(nomFichier);
+
 		for (int j = 0; keepgoing; j++) {
 
 			dur->readBlock(currentBlock, buffer);
@@ -234,9 +298,9 @@ void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 				}
 			}
 
-			currentBlock = dur->ReadFAT(currentBlock);
+			currentBlock = ReadFAT(currentBlock);
 		}
-	
+
 		throw("Impossible de trouve la position");
 
 	}
@@ -245,12 +309,12 @@ void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 	}
 }
 
-CHAR FindFichier(CHAR* nomFichier, CHAR start) {
+CHAR FindFichier(CHAR* nomFichier) {
 	CHAR* block = new CHAR[blockSize];
 	CHAR* blockFichier = new CHAR[blockSize];
 	bool keepgoing = true;
 
-	CHAR nextBlock = start;
+	CHAR nextBlock = debutListeFichier;
 
 	while (keepgoing) {
 		dur->readBlock(nextBlock, block);
@@ -258,15 +322,16 @@ CHAR FindFichier(CHAR* nomFichier, CHAR start) {
 			if (block[i] == 255) {
 				keepgoing = false;
 				break;
-			} else {
+			}
+			else {
 				dur->readBlock(block[i], blockFichier);
-				if (blockFichier == nomFichier) return block[i];
+				if (Compare(blockFichier, nomFichier, nomFichierSize)) return block[i];
 			}
 		}
-		CHAR nextBlock = dur->ReadFAT(nextBlock);
+		CHAR nextBlock = ReadFAT(nextBlock);
 	}
 
-	throw("Aucun fichier trouvé !");
+	//cout << "Aucun fichier trouvé !" << endl;
 
 	return -1;
 }
@@ -285,13 +350,13 @@ void deleteEOF(CHAR* nomFichier, CHAR position) {
 
 // FONCTIONS DU DISQUE DUR
 
-void readBlock(CHAR numBlock, CHAR* tampLecture) {
+void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
 	streampos pos = numBlock * blockSize;
 	hd.seekg(pos);
 	hd.read((char*)tampLecture, blockSize);
 }
 
-void writeBlock(CHAR numBlock, CHAR* tampLecture) {
+void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
 	streampos pos = numBlock * blockSize;
 	hd.seekp(pos);
 	hd.write((char*)tampLecture, blockSize);
@@ -302,11 +367,11 @@ void writeBlock(CHAR numBlock, CHAR* tampLecture) {
 CHAR GetBlockLibre()
 {
 	CHAR* map = (CHAR*)malloc(blockSize);
-	readBlock(bitMap, map);
-	
+	dur->readBlock(bitMap, map);
+
 	int cell = 0;
 	//Trouve la cell avec au moins un bit a 0
-	for ( cell = 0; cell < 32; cell++) {
+	for (cell = 0; cell < 32; cell++) {
 		if (map[cell] != 255) break;
 	}
 
@@ -356,7 +421,7 @@ CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell)
 {
 	CHAR* row = new CHAR[blockSize];
 
-	readBlock(numBlock, row);
+	dur->readBlock(numBlock, row);
 
 	CHAR result = row[numCell];
 
@@ -372,16 +437,23 @@ void SetBitMap(CHAR numBlock, bool state)
 		return;
 	}
 	CHAR* map = (CHAR*)malloc(blockSize);
-	readBlock(bitMap, map);
+	dur->readBlock(bitMap, map);
 
 	CHAR cell = numBlock / 8;
 	CHAR bit = numBlock % 8;
 
-	if(state)
+	if (state)
 		map[cell] |= 1 << bit; //Met le bit a 1
 	else
 		map[cell] &= ~(1 << bit); //Met le bit a 0
-	
-	writeBlock(bitMap, map);
+
+	dur->writeBlock(bitMap, map);
 	delete map;
+}
+
+bool Compare(CHAR* a, CHAR* b, int size) {
+	for (int i = 0; i < size; i++) {
+		if (a[i] != b[i]) return false;
+	}
+	return true;
 }
