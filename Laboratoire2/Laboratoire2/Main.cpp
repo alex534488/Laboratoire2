@@ -283,29 +283,36 @@ void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 	{
 		currentBlock = FindFichier(nomFichier);
 
+		//Trouve la grosseur du dernier block
+		CHAR lastBlockSize = ReadCellFromBlock(currentBlock, blockSize - 1);
+
 		for (int j = 0; keepgoing; j++) {
 
 			dur->readBlock(currentBlock, buffer);
 
-			for (int i = 0; i < 64; i++) {
-				if (((j * 64 + i) >= currentPos) && nbChar <= ((j * 64 + i) - position)) {
+			for (int i = 0; i < blockSize; i++) {
+				int currentTotalPos = j * blockSize + i;
+
+				if (currentTotalPos >= currentPos) {
 					// on a trouve la position!
 					TampLecture[currentChar] = buffer[i];
 					currentChar++;
-				}
-				else if (currentChar > nbChar) {
-					return;
+					if (currentChar >= nbChar) return;
 				}
 			}
 
 			currentBlock = ReadFAT(currentBlock);
+			if (currentBlock == BLOCKFAULT) return;
 		}
 
-		throw("Impossible de trouve la position");
+		throw("Impossible de trouver la position");
 
 	}
 	catch (string error) {
 		cout << error << endl;
+	}
+	catch (...) {
+		cout << "Erreur inconnue de lecture de fichier." << endl;
 	}
 }
 
