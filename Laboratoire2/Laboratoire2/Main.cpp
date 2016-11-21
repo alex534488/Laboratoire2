@@ -117,7 +117,7 @@ int FileLenght(CHAR* nomFichier) {
 
 	CHAR filePos = FindFichier(nomFichier);
 
-	if (filePos == -1) return;
+	if (filePos == BLOCKFAULT) return -1;
 
 	//Grosser du dernier block ex: [64,64,64,21]  -> 21
 	CHAR grosseurDernierBlock = ReadCellFromBlock(filePos, blockSize - 1);
@@ -149,7 +149,7 @@ CHAR* GetRandomFileName(CHAR* alphabet) {
 	//Trouve une lettre non-utilisé
 	for (int i = 0; i < 26; i++) {
 		nomFichier[0] = alphabet[i];
-		if (FindFichier(nomFichier) == -1) break;
+		if (FindFichier(nomFichier) == BLOCKFAULT) break;
 	}
 	return nomFichier;
 }
@@ -239,7 +239,7 @@ void UpdateScreen() {
 			else {
 				dur->readBlock(block[i], blockFichier);
 				listInfo[i] = 'A';
-				AddToString(output,blockFichier, blockSize-1);
+				AddToString(output, blockFichier, blockSize - 1);
 				lenghtLastBlock = blockFichier[63];
 				output += ", ";
 				nextFileBlock = ReadFAT(block[i]);
@@ -292,41 +292,32 @@ void AddToString(string & result, CHAR* input, int lenght) {
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
 // ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
-void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
+void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
 	CHAR currentBlock;
 	int currentChar = 0;
 	bool keepgoing = true;
-	CHAR currentPos = position;
 	CHAR* buffer = new CHAR[blockSize];
 
 	try
 	{
-		currentBlock = FindFichier(nomFichier);
+		CHAR currentBlock;
+		CHAR startCell;
+		GetPosIntoFile(nomFichier, position, startCell, currentBlock);
 
-		//Trouve la grosseur du dernier block
-		CHAR lastBlockSize = ReadCellFromBlock(currentBlock, blockSize - 1);
-
-		for (int j = 0; keepgoing; j++) {
-
+		while (true)
+		{
 			dur->readBlock(currentBlock, buffer);
 
-			for (int i = 0; i < blockSize; i++) {
-				int currentTotalPos = j * blockSize + i;
-
-				if (currentTotalPos >= currentPos) {
-					// on a trouve la position!
-					TampLecture[currentChar] = buffer[i];
-					currentChar++;
-					if (currentChar >= nbChar) return;
-				}
+			for (int i = startCell; i < blockSize; i++) {
+				TampLecture[currentChar] = buffer[i];
+				currentChar++;
+				if (currentChar >= nbChar) return; //Fini !
 			}
 
+			startCell = 0;
 			currentBlock = ReadFAT(currentBlock);
-			if (currentBlock == BLOCKFAULT) return;
+			if (currentBlock == BLOCKFAULT) throw("Fichier est trop court."); //Fini !
 		}
-
-		throw("Impossible de trouver la position");
-
 	}
 	catch (string error) {
 		cout << error << endl;
@@ -372,7 +363,8 @@ CHAR FindFichier(CHAR* nomFichier) {
 	return BLOCKFAULT;
 }
 
-void write(CHAR* nomFichier, CHAR position, int nbChar, CHAR* TampLecture) {
+void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture) {
+	CHAR teteFichier = FindFichier(nomFichier);
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
 
 	// Si le fichier n'existe pas deja, creer sa referance avec son nom 
@@ -499,4 +491,28 @@ bool Compare(CHAR* a, CHAR* b, int size) {
 		if (a[i] != b[i]) return false;
 	}
 	return true;
+}
+
+void GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock) {
+	CHAR currentBlock = FindFichier(nomFichier);
+
+	if (currentBlock == BLOCKFAULT) throw("Fichier inexistant");
+	currentBlock = ReadFAT(currentBlock);
+	if (currentBlock == BLOCKFAULT) throw("Fichier vide");
+
+	CHAR* buffer = new CHAR[blockSize];
+
+	for (int j = 0; true; j++) {
+		for (int i = 0; i < blockSize; i++) {
+			int currentTotalPos = j * blockSize + i;
+
+			if (currentTotalPos >= position) {
+				outPos = i;
+				outBlock = currentBlock;
+				return;
+			}
+		}
+		currentBlock = ReadFAT(currentBlock);
+		if (currentBlock == BLOCKFAULT) throw("Fichier est plus court que la position donnee");
+	}
 }
