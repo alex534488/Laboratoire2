@@ -424,11 +424,13 @@ void ClearBlockLinksFrom(CHAR currentBlock) {
 	
 	while (true)
 	{
-		SetBitMap(currentBlock, false);
 		CHAR pastBlock = currentBlock;
 		currentBlock = ReadFAT(currentBlock);
 		WriteFAT(pastBlock, BLOCKFAULT);
+
 		if (currentBlock == BLOCKFAULT) break;
+
+		SetBitMap(currentBlock, false);
 	}
 }
 
