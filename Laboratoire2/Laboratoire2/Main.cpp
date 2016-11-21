@@ -42,6 +42,7 @@ void UpdateScreen();
 void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void deleteEOF(string nomFichier, fpos_t position);
+void GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock);
 
 DisqueDur* dur;
 
@@ -384,8 +385,43 @@ void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture) {
 	// position 0 correspond a apres la reference
 }
 
-void deleteEOF(CHAR* nomFichier, CHAR position) {
+void deleteEOF(CHAR* nomFichier, int position) {
 	// ouvre un fichier existant et le coupe à "position" puis le referme. Si position est 0, le fichier est effacé.
+	CHAR* buffer = new CHAR[blockSize];
+
+	try
+	{
+		CHAR currentBlock;
+		CHAR startCell;
+		GetPosIntoFile(nomFichier, position, startCell, currentBlock);
+		
+		if (position == 0) {
+			DeleteFichier(nomFichier);
+		}
+		else {
+			dur->readBlock(currentBlock, buffer);
+			ResetBitMaps(currentBlock);
+			for (int i = startCell; i < blockSize; i++) {
+				buffer[i] = 0;
+			}
+			dur->writeBlock(currentBlock,buffer);
+			WriteFAT(currentBlock, 0);
+		}
+	}
+	catch (string error) {
+		cout << error << endl;
+	}
+	catch (...) {
+		cout << "Erreur inconnue de lecture de fichier." << endl;
+	}
+}
+
+void DeleteFichier(CHAR* nomFichier) {
+
+}
+
+void ResetBitMaps(CHAR currentBlock) {
+
 }
 
 // FONCTIONS DU DISQUE DUR
@@ -447,6 +483,10 @@ bool IsBlockLibre(CHAR numBlock)
 	CHAR result = ReadCellFromBlock(bitMap, cell);
 
 	return ((result >> bit) & 0x01) == 0;
+}
+
+CHAR WriteFAT(CHAR numBlock, CHAR newNumBlock) {
+
 }
 
 CHAR ReadFAT(CHAR numBlock)
