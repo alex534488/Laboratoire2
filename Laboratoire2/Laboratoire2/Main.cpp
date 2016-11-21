@@ -117,7 +117,7 @@ int FileLenght(CHAR* nomFichier) {
 
 	CHAR filePos = FindFichier(nomFichier);
 
-	if (filePos == -1) return;
+	if (filePos == BLOCKFAULT) return -1;
 
 	//Grosser du dernier block ex: [64,64,64,21]  -> 21
 	CHAR grosseurDernierBlock = ReadCellFromBlock(filePos, blockSize - 1);
@@ -149,7 +149,7 @@ CHAR* GetRandomFileName(CHAR* alphabet) {
 	//Trouve une lettre non-utilisé
 	for (int i = 0; i < 26; i++) {
 		nomFichier[0] = alphabet[i];
-		if (FindFichier(nomFichier) == -1) break;
+		if (FindFichier(nomFichier) == BLOCKFAULT) break;
 	}
 	return nomFichier;
 }
@@ -283,6 +283,8 @@ void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 	{
 		currentBlock = FindFichier(nomFichier);
 
+		if(currentBlock == BLOCKFAULT) throw("Fichier inexistant");
+
 		//Trouve la grosseur du dernier block
 		CHAR lastBlockSize = ReadCellFromBlock(currentBlock, blockSize - 1);
 
@@ -353,6 +355,7 @@ CHAR FindFichier(CHAR* nomFichier) {
 }
 
 void write(CHAR* nomFichier, CHAR position, int nbChar, CHAR* TampLecture) {
+	CHAR teteFichier = FindFichier(nomFichier)
 	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
 
 	// Si le fichier n'existe pas deja, creer sa referance avec son nom 
