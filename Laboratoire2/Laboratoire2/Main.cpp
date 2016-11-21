@@ -1,16 +1,11 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
-#include <vector>
-#include <array>
 #include <string>
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
 using namespace std;
-
-time_t t = time(NULL);
-tm* timePtr = localtime(&t);
 
 #define CHAR unsigned char
 #define bitMap 251
@@ -52,6 +47,9 @@ DisqueDur* dur;
 
 int main() {
 	dur = new DisqueDur("hd.dh");
+	
+	//Initialise la seed du random
+	srand(time(NULL));
 
 	int timer = 0;
 	string buffer;
@@ -365,9 +363,23 @@ CHAR FindFichier(CHAR* nomFichier) {
 
 void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture) {
 	CHAR teteFichier = FindFichier(nomFichier);
-	// ouvre un fichier ou le crée au besoin et écrit (selon les paramètres) TampEcriture puis le referme.
+	
+	// Creer la tete du fichier
+	if (teteFichier == BLOCKFAULT) {
+		//Creer le fichier
+		teteFichier = GetBlockLibre();
+		nomFichier[63] = 0; //Dernier octet -> grosseur du dernier block
+		dur->writeBlock(teteFichier, nomFichier);
+		SetBitMap(teteFichier, true);
+	}
 
-	// Si le fichier n'existe pas deja, creer sa referance avec son nom 
+	while (true)
+	{
+
+	}
+
+
+	// Si le fichier n'existe pas deja, creer sa reference avec son nom 
 
 	// position 0 correspond a apres la reference
 }
