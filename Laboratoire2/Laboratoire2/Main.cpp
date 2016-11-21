@@ -400,7 +400,7 @@ void deleteEOF(CHAR* nomFichier, int position) {
 		}
 		else {
 			dur->readBlock(currentBlock, buffer);
-			ResetBitMaps(currentBlock);
+			ClearBlockLinksFrom(currentBlock);
 			for (int i = startCell; i < blockSize; i++) {
 				buffer[i] = 0;
 			}
@@ -420,8 +420,16 @@ void DeleteFichier(CHAR* nomFichier) {
 
 }
 
-void ResetBitMaps(CHAR currentBlock) {
-
+void ClearBlockLinksFrom(CHAR currentBlock) {
+	
+	while (true)
+	{
+		SetBitMap(currentBlock, false);
+		CHAR pastBlock = currentBlock;
+		currentBlock = ReadFAT(currentBlock);
+		WriteFAT(pastBlock, BLOCKFAULT);
+		if (currentBlock == BLOCKFAULT) break;
+	}
 }
 
 // FONCTIONS DU DISQUE DUR
