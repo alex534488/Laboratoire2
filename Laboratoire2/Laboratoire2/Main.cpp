@@ -303,29 +303,36 @@ void read(CHAR* nomFichier, CHAR position, int nbChar, CHAR* & TampLecture) {
 	{
 		currentBlock = FindFichier(nomFichier);
 
+		//Trouve la grosseur du dernier block
+		CHAR lastBlockSize = ReadCellFromBlock(currentBlock, blockSize - 1);
+
 		for (int j = 0; keepgoing; j++) {
 
 			dur->readBlock(currentBlock, buffer);
 
-			for (int i = 0; i < 64; i++) {
-				if (((j * 64 + i) >= currentPos) && nbChar <= ((j * 64 + i) - position)) {
+			for (int i = 0; i < blockSize; i++) {
+				int currentTotalPos = j * blockSize + i;
+
+				if (currentTotalPos >= currentPos) {
 					// on a trouve la position!
 					TampLecture[currentChar] = buffer[i];
 					currentChar++;
-				}
-				else if (currentChar > nbChar) {
-					return;
+					if (currentChar >= nbChar) return;
 				}
 			}
 
 			currentBlock = ReadFAT(currentBlock);
+			if (currentBlock == BLOCKFAULT) return;
 		}
 
-		throw("Impossible de trouve la position");
+		throw("Impossible de trouver la position");
 
 	}
 	catch (string error) {
 		cout << error << endl;
+	}
+	catch (...) {
+		cout << "Erreur inconnue de lecture de fichier." << endl;
 	}
 }
 
@@ -338,22 +345,31 @@ CHAR FindFichier(CHAR* nomFichier) {
 
 	while (keepgoing) {
 		dur->readBlock(nextBlock, block);
+
+		//Check tous les fichier du block courent
 		for (int i = 0; i < blockSize; i++) {
-			if (block[i] == 255) {
-				keepgoing = false;
-				break;
+			if (block[i] == BLOCKFAULT) {
+				delete block;
+				delete blockFichier;
+				return BLOCKFAULT;
 			}
-			else {
-				dur->readBlock(block[i], blockFichier);
-				if (Compare(blockFichier, nomFichier, nomFichierSize)) return block[i];
+			dur->readBlock(block[i], blockFichier);
+			if (Compare(blockFichier, nomFichier, nomFichierSize)) {
+				delete block;
+				delete blockFichier;
+				return block[i];
 			}
 		}
+
+		//Pas dans ce block ? next one!
 		CHAR nextBlock = ReadFAT(nextBlock);
+
+		if (nextBlock == BLOCKFAULT) break;
 	}
 
-	//cout << "Aucun fichier trouvé !" << endl;
-
-	return -1;
+	delete block;
+	delete blockFichier;
+	return BLOCKFAULT;
 }
 
 void write(CHAR* nomFichier, CHAR position, int nbChar, CHAR* TampLecture) {
