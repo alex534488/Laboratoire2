@@ -380,8 +380,15 @@ void write(CHAR* nomFichier, CHAR position, int nbChar, CHAR* TampLecture) {
 	// position 0 correspond a apres la reference
 }
 
-void deleteEOF(CHAR* nomFichier, CHAR position) {
+void deleteEOF(CHAR* nomFichier, int position) {
 	// ouvre un fichier existant et le coupe à "position" puis le referme. Si position est 0, le fichier est effacé.
+
+	if (position == 0) {
+
+	}
+	else {
+
+	}
 }
 
 // FONCTIONS DU DISQUE DUR
