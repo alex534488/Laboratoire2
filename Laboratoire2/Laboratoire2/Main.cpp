@@ -216,28 +216,13 @@ void UpdateScreen() {
 	CHAR* block = new CHAR[blockSize];
 	CHAR* buffer = new CHAR[blockSize];
 	CHAR* blockFichier = new CHAR[blockSize];
+	CHAR* listInfo = new CHAR[256];
 	CHAR nextBlock = 0;
+	CHAR lenghtLastBlock;
 	CHAR nextFileBlock;
+	string output = "";
 	bool keepgoing = true;
 	bool endOfFile = false;
-
-	/*
-	L'ensemble de son fichier HD.DH soit 256 lettres majuscules ou minuscules selon que le bloc est plein ou incomplet.
-	Par exemple, écrire un A (majuscule) pour représenter un bloc plein de "a" et un a (minuscule) pour un bloc incomplet de "a".
-	*/
-	for (int i = 0; i < bitMap; i++) {
-		dur->readBlock((CHAR)i, buffer);
-		// es ce que buffer est plein ou incomplet?
-		//plein
-		cout << " Bloc " << i << ": A |";
-		// incomplet
-		cout << " Bloc " << i << ": a |";
-		// vide
-		cout << " Bloc " << i << ": 0 |";
-	}
-
-	//La liste des fichiers et des blocs qu'ils occupent.
-	cout << "\n\nListe des fichiers : ";
 
 	while (keepgoing) {
 		dur->readBlock(nextBlock, block);
@@ -245,26 +230,61 @@ void UpdateScreen() {
 			if (block[i] == 255) {
 				// Fin de la liste des fichiers
 				keepgoing = false;
+				// On doit quand meme imprimer tout les blocs
+				for (int j = 0; j < bitMap; j++) {
+					listInfo[i] = '0';
+				}
 				break;
 			}
 			else {
 				dur->readBlock(block[i], blockFichier);
-				cout << blockFichier << ", ";
+				listInfo[i] = 'A';
+				AddToString(output,blockFichier, blockSize-1);
+				lenghtLastBlock = blockFichier[63];
+				output += ", ";
 				nextFileBlock = ReadFAT(block[i]);
-				if (nextFileBlock == 0) {
-					cout << nextFileBlock << "|";
+				if (nextFileBlock == BLOCKFAULT) {
+					// Fin du fichier deja rencontrer
+					output += "|";
 					endOfFile = true;
 				}
 				while (!endOfFile) {
-					cout << nextFileBlock << "->";
+					output += nextFileBlock + "->";
 					nextFileBlock = ReadFAT(nextFileBlock);
-					if (nextFileBlock == 0) endOfFile = true;
+					if (nextFileBlock == BLOCKFAULT) {
+						if (lenghtLastBlock != 0) {
+							listInfo[i] = 'a';
+						}
+						else {
+							listInfo[i] = 'A';
+						}
+						endOfFile = true; // Fin du fichier
+					}
 				}
 				endOfFile = false;
-				cout << "|";
+				output += "|";
 			}
 		}
 		nextBlock = ReadFAT(nextBlock);
+	}
+
+	cout << "\n\nListe des fichiers : ";
+
+	cout << output << endl;
+
+	for (int i = 0; i < 256; i++) {
+		cout << " Bloc " << i << ": " << listInfo[i] << " |";
+	}
+
+	delete block;
+	delete buffer;
+	delete blockFichier;
+	return;
+}
+
+void AddToString(string & result, CHAR* input, int lenght) {
+	for (int i = 0; i < lenght; i++) {
+		result += input[i];
 	}
 	return;
 }
