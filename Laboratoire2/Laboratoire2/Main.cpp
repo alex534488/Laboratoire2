@@ -485,8 +485,19 @@ bool IsBlockLibre(CHAR numBlock)
 	return ((result >> bit) & 0x01) == 0;
 }
 
-CHAR WriteFAT(CHAR numBlock, CHAR newNumBlock) {
+CHAR WriteFAT(CHAR numBlock, CHAR value)
+{
+	CHAR block = (numBlock / blockSize) + FAT;
+	CHAR cell = numBlock % blockSize;
 
+	CHAR* row = new CHAR[blockSize];
+	dur->readBlock(block, row);
+
+	row[cell] = value;
+
+	dur->writeBlock(block, row);
+
+	delete row;
 }
 
 CHAR ReadFAT(CHAR numBlock)
