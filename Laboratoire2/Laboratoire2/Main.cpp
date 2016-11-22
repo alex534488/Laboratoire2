@@ -540,6 +540,8 @@ void DeleteFichier(CHAR* nomFichier) {
 		}
 		dur->writeBlock(j, buffer);
 	}
+	delete[] buffer;
+	delete[] oldRacine;
 	return;
 }
 
