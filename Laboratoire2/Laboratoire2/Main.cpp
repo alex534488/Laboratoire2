@@ -23,7 +23,7 @@ private:
 public:
 	DisqueDur(string fichier) {
 		hd.open(fichier, fstream::in | fstream::out | fstream::binary);
-		if (!hd.is_open) {
+		if (!hd.is_open()) {
 			throw("Erreur lors de l'ouverture de " + fichier);
 		}
 	}
@@ -38,9 +38,9 @@ public:
 
 void UpdateFiles();
 void UpdateScreen();
-void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
-void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
-void deleteEOF(string nomFichier, fpos_t position);
+void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture);
+void deleteEOF(CHAR* nomFichier, int position);
+void read(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture);
 bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock);
 int FileLength(CHAR* nomFichier);
 CHAR* GetRandomFileName(CHAR* alphabet);
@@ -53,7 +53,7 @@ void DeleteFichier(CHAR* nomFichier);
 void ClearBlockLinksFrom(CHAR currentBlock);
 CHAR GetBlockLibre();
 bool IsBlockLibre(CHAR numBlock);
-CHAR WriteFAT(CHAR numBlock, CHAR value);
+void WriteFAT(CHAR numBlock, CHAR value);
 CHAR ReadFAT(CHAR numBlock);
 CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
 void SetBitMap(CHAR numBlock, bool state);
@@ -72,7 +72,7 @@ int main() {
 	dur = new DisqueDur("hd.dh");
 
 	//Initialise la seed du random
-	srand(time(NULL));
+	srand((unsigned int) time(NULL));
 
 	int timer = 0;
 	string buffer;
@@ -189,7 +189,7 @@ int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer) {
 CHAR* FindRandomFileName() {
 	//Trouve un bloc aléatoire du dossier racine
 	int nbCells = CountNbFiles();
-	int nbBlocks = floor(nbCells / 64);
+	int nbBlocks = nbCells / 64;
 	CHAR block = rand() % nbBlocks;
 
 	//Trouve la quantité de cellule dans le block choisi
@@ -320,9 +320,7 @@ void AddToString(string & result, CHAR* input, int lenght) {
 
 // ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
 void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
-	CHAR currentBlock;
 	int currentChar = 0;
-	bool keepgoing = true;
 	CHAR* buffer = new CHAR[blockSize];
 
 	try
@@ -338,7 +336,10 @@ void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
 			for (int i = startCell; i < blockSize; i++) {
 				TampLecture[currentChar] = buffer[i];
 				currentChar++;
-				if (currentChar >= nbChar) return; //Fini !
+				if (currentChar >= nbChar) {
+					delete[] buffer;
+					return; //Fini !
+				}
 			}
 
 			startCell = 0;
@@ -352,6 +353,7 @@ void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
 	catch (...) {
 		cout << "Erreur inconnue de lecture de fichier." << endl;
 	}
+	delete[] buffer;
 }
 
 CHAR FindFichier(CHAR* nomFichier) {
@@ -380,7 +382,7 @@ CHAR FindFichier(CHAR* nomFichier) {
 		}
 
 		//Pas dans ce block ? next one!
-		CHAR nextBlock = ReadFAT(nextBlock);
+		nextBlock = ReadFAT(nextBlock);
 
 		if (nextBlock == BLOCKFAULT) break;
 	}
@@ -588,7 +590,7 @@ bool IsBlockLibre(CHAR numBlock)
 	return ((result >> bit) & 0x01) == 0;
 }
 
-CHAR WriteFAT(CHAR numBlock, CHAR value)
+void WriteFAT(CHAR numBlock, CHAR value)
 {
 	CHAR block = (numBlock / blockSize) + FAT;
 	CHAR cell = numBlock % blockSize;
@@ -675,12 +677,18 @@ bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock
 			outPos = i;
 
 			if (currentTotalPos >= position) {
-				return;
+				delete[] buffer;
+				return true;
 			}
 		}
 		currentBlock = ReadFAT(currentBlock);
-		if (currentBlock == BLOCKFAULT) false;
+		if (currentBlock == BLOCKFAULT) {
+			delete[] buffer;
+			return false;
+		}
 	}
+	delete[] buffer;
+	return false;
 }
 
 CHAR CreateFile(CHAR* nomFichier)
