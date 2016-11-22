@@ -481,9 +481,7 @@ void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture) {
 }
 
 void deleteEOF(CHAR* nomFichier, int position) {
-	// ouvre un fichier existant et le coupe à "position" puis le referme. Si position est 0, le fichier est effacé.
 	CHAR* buffer = new CHAR[blockSize];
-
 	try
 	{
 		CHAR currentBlock;
@@ -514,7 +512,39 @@ void deleteEOF(CHAR* nomFichier, int position) {
 }
 
 void DeleteFichier(CHAR* nomFichier) {
+	CHAR firstFileBloc = FindFichier(nomFichier);
+	CHAR* buffer = new CHAR[blockSize];
+	CHAR* oldRacine = new CHAR[blockSize];
+	bool keepgoing = false;
+	bool getout = false;
 
+	// On rend libre les blocs du fichier
+	ClearBlockLinksFrom(firstFileBloc);
+	WriteFAT(firstFileBloc, 0);
+
+	// On retire le fichier du bloc racine contenant la liste des fichiers
+	for (int j = 0; !getout; j++) {
+		dur->readBlock(j, oldRacine);
+		buffer = oldRacine;
+		for (int i = 0; i < blockSize; i++) {
+			if (keepgoing) {
+				buffer[i] = buffer[i + 1];
+			}
+			else if (oldRacine[i] == firstFileBloc) {
+				// on a trouve la cellule du fichier!
+				keepgoing = true;
+				buffer[i] = buffer[i + 1];
+			}
+			else if (oldRacine[i] == 255) {
+				getout = true;
+				break;
+			}
+		}
+		dur->writeBlock(j, buffer);
+	}
+	delete[] buffer;
+	delete[] oldRacine;
+	return;
 }
 
 void ClearBlockLinksFrom(CHAR currentBlock) {
