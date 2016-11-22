@@ -42,6 +42,29 @@ void read(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void write(string nomFichier, fpos_t position, int nbChar, CHAR* TampLecture);
 void deleteEOF(string nomFichier, fpos_t position);
 bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock);
+int FileLength(CHAR* nomFichier);
+CHAR* GetRandomFileName(CHAR* alphabet);
+int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer);
+CHAR* FindRandomFileName();
+int CountNbFiles();
+void AddToString(string & result, CHAR* input, int lenght);
+CHAR FindFichier(CHAR* nomFichier);
+void DeleteFichier(CHAR* nomFichier);
+void ClearBlockLinksFrom(CHAR currentBlock);
+CHAR GetBlockLibre();
+bool IsBlockLibre(CHAR numBlock);
+CHAR WriteFAT(CHAR numBlock, CHAR value);
+CHAR ReadFAT(CHAR numBlock);
+CHAR ReadCellFromBlock(CHAR numBlock, CHAR numCell);
+void SetBitMap(CHAR numBlock, bool state);
+bool Compare(CHAR* a, CHAR* b, int size);
+bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock);
+CHAR CreateFile(CHAR* nomFichier);
+CHAR NewLinkedBlock(CHAR from);
+CHAR NewBlock();
+CHAR NewBlock(CHAR* content);
+void FillBlockWith(CHAR block, CHAR character);
+CHAR GetCharacter(CHAR block, CHAR character);
 
 DisqueDur* dur;
 
@@ -216,7 +239,7 @@ void UpdateScreen() {
 	CHAR* buffer = new CHAR[blockSize];
 	CHAR* blockFichier = new CHAR[blockSize];
 	CHAR* listInfo = new CHAR[256];
-	CHAR nextBlock = 0;
+	CHAR currentBlock = 0;
 	CHAR lenghtLastBlock;
 	CHAR nextFileBlock;
 	string output = "";
@@ -224,7 +247,7 @@ void UpdateScreen() {
 	bool endOfFile = false;
 
 	while (keepgoing) {
-		dur->readBlock(nextBlock, block);
+		dur->readBlock(currentBlock, block);
 		for (int i = 0; i < blockSize; i++) {
 			if (block[i] == 255) {
 				// Fin de la liste des fichiers
@@ -238,7 +261,11 @@ void UpdateScreen() {
 			else {
 				dur->readBlock(block[i], blockFichier);
 				listInfo[i] = 'A';
+
+				CHAR length = GetCharacter(currentBlock, 3);
+				if (length == BLOCKFAULT)length = blockSize - 1;
 				AddToString(output, blockFichier, blockSize - 1);
+
 				lenghtLastBlock = blockFichier[63];
 				output += ", ";
 				nextFileBlock = ReadFAT(block[i]);
@@ -264,7 +291,7 @@ void UpdateScreen() {
 				output += "|";
 			}
 		}
-		nextBlock = ReadFAT(nextBlock);
+		currentBlock = ReadFAT(currentBlock);
 	}
 
 	cout << "\n\nListe des fichiers : ";
@@ -278,6 +305,7 @@ void UpdateScreen() {
 	delete[] block;
 	delete[] buffer;
 	delete[] blockFichier;
+	delete[] listInfo;
 	return;
 }
 
@@ -458,15 +486,17 @@ void deleteEOF(CHAR* nomFichier, int position) {
 	{
 		CHAR currentBlock;
 		CHAR startCell;
-		GetPosIntoFile(nomFichier, position, startCell, currentBlock);
+		int pos = position - 1;
 
-		if (position == 0) {
+		if (position <= 0) {
 			DeleteFichier(nomFichier);
 		}
 		else {
+			GetPosIntoFile(nomFichier, pos, startCell, currentBlock);
+
 			dur->readBlock(currentBlock, buffer);
 			ClearBlockLinksFrom(currentBlock);
-			for (int i = startCell; i < blockSize; i++) {
+			for (int i = startCell + 1; i < blockSize; i++) {
 				buffer[i] = 0;
 			}
 			dur->writeBlock(currentBlock, buffer);
@@ -656,11 +686,12 @@ bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock
 CHAR CreateFile(CHAR* nomFichier)
 {
 	//Vérifie si le fichier existe déjà
-	if(FindFichier(nomFichier) != BLOCKFAULT) throw("Erreur de création de fichier, nom déjà existant.");
+	if (FindFichier(nomFichier) != BLOCKFAULT) throw("Erreur de création de fichier, nom déjà existant.");
 
 	//Cree le fichier
 	nomFichier[63] = 0; //Dernier octet -> grosseur du dernier block
-	CHAR teteFichier = NewBlock(nomFichier);
+	CHAR teteFichier = NewBlock();
+	FillBlockWith(teteFichier, 3);
 
 	// -------Fait le lien dans le dossier racine------- //
 
@@ -716,4 +747,24 @@ CHAR NewBlock(CHAR* content)
 	dur->writeBlock(nouveauBlock, content);
 
 	return nouveauBlock;
+}
+
+void FillBlockWith(CHAR block, CHAR character)
+{
+	CHAR* content = new CHAR[blockSize];
+
+	for (int i = 0; i < blockSize; i++) {
+		content[i] = character;
+	}
+	dur->writeBlock(block, content);
+	delete content;
+}
+
+CHAR GetCharacter(CHAR block, CHAR character) {
+	CHAR* content = new CHAR[blockSize];
+	dur->readBlock(block, content);
+	for (CHAR i = 0; i < blockSize; i++) {
+		if (content[i] == character) return i;
+	}
+	return BLOCKFAULT;
 }
