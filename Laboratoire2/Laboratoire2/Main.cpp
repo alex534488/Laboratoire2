@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <ctype.h>
 using namespace std;
 
 #define CHAR unsigned char
@@ -14,6 +15,7 @@ using namespace std;
 #define blockSize 64
 #define nomFichierSize 63
 #define BLOCKFAULT 255
+#define nomDur "hd.dh"
 
 class DisqueDur {
 private:
@@ -21,15 +23,22 @@ private:
 	// Un seul fichier est écrit par le programme en exécution (HD.DH).
 	fstream hd;
 public:
-	DisqueDur(string fichier) {
+	DisqueDur(const char* fichier) {
 		hd.open(fichier, fstream::in | fstream::out | fstream::binary);
+
 		if (!hd.is_open()) {
-			throw("Erreur lors de l'ouverture de " + fichier);
+
+			ofstream outfile(fichier);
+			outfile.close();
+			hd.open(fichier, fstream::in | fstream::out | fstream::binary);
+
+			if (!hd.is_open())
+				throw((string)"Erreur lors de l'ouverture du fichier.");
 		}
 	}
 
 	~DisqueDur() {
-
+		hd.close();
 	}
 
 	void readBlock(CHAR numBlock, CHAR* tampLecture);
@@ -38,19 +47,19 @@ public:
 
 void UpdateFiles();
 void UpdateScreen();
-void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture);
-void deleteEOF(CHAR* nomFichier, int position);
-void read(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture);
+void write(const char* nomFichier, int position, int nbChar, CHAR* TampLecture);
+void deleteEOF(const char* nomFichier, int position);
+void read(const char* nomFichier, int position, int nbChar, CHAR* TampLecture);
 bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock);
 int FileLength(CHAR* nomFichier);
-CHAR* GetRandomFileName(CHAR* alphabet);
+const char* CreateRandomFileName(CHAR* alphabet);
 int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer);
-CHAR* FindRandomFileName();
+const char* FindRandomFileName();
 int CountNbFiles();
 void AddToString(string & result, CHAR* input, int lenght);
 CHAR FindFichier(CHAR* nomFichier);
 void DeleteFichier(CHAR* nomFichier);
-void ClearBlockLinksFrom(CHAR currentBlock);
+void ClearBlockLinksFrom(CHAR currentBlock, bool firstBlockIntact = true);
 CHAR GetBlockLibre();
 bool IsBlockLibre(CHAR numBlock);
 void WriteFAT(CHAR numBlock, CHAR value);
@@ -65,27 +74,58 @@ CHAR NewBlock();
 CHAR NewBlock(CHAR* content);
 void FillBlockWith(CHAR block, CHAR character);
 CHAR GetCharacter(CHAR block, CHAR character);
+CHAR* Convert(const char* text);
+bool FileExists(const char*  name);
+void FormatHDD();
+const char* Convert(CHAR* text, int lenght);
 
 DisqueDur* dur;
 
 int main() {
-	dur = new DisqueDur("hd.dh");
+	remove(nomDur); // TEMPORAIRE !
 
 	//Initialise la seed du random
-	srand((unsigned int) time(NULL));
+	srand((unsigned int)time(NULL));
 
-	int timer = 0;
-	string buffer;
+	//Check si le hd.dh existait au paravant
+	bool mustFormat = !FileExists(nomDur);
 
-	while (true) {
-		UpdateFiles();
-		if (timer >= 50000) {
-			UpdateScreen();
-			timer = 0;
-		}
-		timer++;
+	try {
+		dur = new DisqueDur(nomDur);
+	}
+	catch (string erreur) {
+		std::cout << erreur << endl;
 	}
 
+	//Setup le HDD si necessaire
+	if (mustFormat) FormatHDD();
+
+	//string buffer;
+
+	while (true) {
+		/*CHAR* data = new CHAR[66]{ "BobEstUne_BobEstUne_BobEstUne_xx BobEstUne_BobEstUne_BobEstUne_xx" };
+		write("toto.txt", 0, 66, data);
+		UpdateScreen();
+		delete dur;*/
+		try
+		{
+			UpdateFiles();
+			UpdateScreen();
+		}
+		catch (string error) {
+			cout << error << endl;
+		}
+		catch (const std::exception&)
+		{
+			cout << "Erreur inconnue." << endl;
+		}
+
+		char* temp = new char[30];
+		cin >> temp;
+		delete temp;
+	}
+
+	delete dur;
 	return 0;
 }
 
@@ -98,38 +138,44 @@ void UpdateFiles() {
 
 	int action = rand() % 4;
 
+	cout << "\n\n" << endl;
 	switch (action)
 	{
 	default:
 	case 0:
 	{
+		cout << "Creation d'un nouveau fichier." << endl;
 		// Ecriture d'un nouveau fichier
-		CHAR* nomFichier = GetRandomFileName(alphabet);
+		const char* nomFichier = CreateRandomFileName(alphabet);
 		write(nomFichier, 0, WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
 		delete[] nomFichier;
 	}
 	break;
 	case 1:
+		cout << "Suppression totale d'un fichier existant." << endl;
 		// Supprimer un fichier
 		deleteEOF(FindRandomFileName(), 0);
 		break;
 	case 2:
 	{
-		CHAR* nomFichier = FindRandomFileName();
+		cout << "Ecriture dans un fichier existant." << endl;
+		const char* nomFichier = FindRandomFileName();
 		// Ecriture dans un fichier existant
-		write(nomFichier, 0, WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
+		write(nomFichier, rand() % FileLength(Convert(nomFichier)), WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
 		delete[] nomFichier;
 	}
 	break;
 	case 3:
 	{
+		cout << "Suppresion de la fin d'un fichier." << endl;
 		// Effacement de la fin d'un fichier
-		CHAR* nomFichier = FindRandomFileName();
-		deleteEOF(nomFichier, rand() % FileLength(nomFichier));
+		const char* nomFichier = FindRandomFileName();
+		deleteEOF(nomFichier, rand() % FileLength(Convert(nomFichier)));
 		delete[] nomFichier;
 	}
 	break;
 	}
+	cout << "\n";
 
 	delete[] buffer;
 }
@@ -139,15 +185,15 @@ int FileLength(CHAR* nomFichier) {
 
 	CHAR filePos = FindFichier(nomFichier);
 
-	if (filePos == BLOCKFAULT) throw("Impossible de trouver la grosseur d'un fichier car il est inexistant.");
+	if (filePos == BLOCKFAULT) throw((string)"Impossible de trouver la grosseur d'un fichier car il est inexistant.");
 
 	//Grosser du dernier block ex: [64,64,64,21]  -> 21
 	CHAR grosseurDernierBlock = ReadCellFromBlock(filePos, blockSize - 1);
 
 	int quantitéDeBlockPlein = 0;
 
-	//Trouve la quantité de block plein (INCLUANT LE PREMIER)  ex: [64,64,64,21]  -> 3
-	CHAR next = filePos;
+	//Trouve la quantité de block plein (EXCLUANT LE PREMIER)  ex: [64,64,64,21]  -> 3
+	CHAR next = ReadFAT(filePos);
 	while (true)
 	{
 		next = ReadFAT(next);
@@ -160,9 +206,15 @@ int FileLength(CHAR* nomFichier) {
 }
 
 //A noter que si toute les lettre de l'alphabet son prise, plusieur fichier auront le nom z.txt
-CHAR* GetRandomFileName(CHAR* alphabet) {
+const char* CreateRandomFileName(CHAR* alphabet) {
 	//Toujours _.txt
 	CHAR* nomFichier = new CHAR[nomFichierSize];
+
+	//Remplie de 0
+	for (int i = 0; i < nomFichierSize; i++)
+		nomFichier[i] = 0;
+
+	//Met le .txt
 	nomFichier[1] = '.';
 	nomFichier[2] = 't';
 	nomFichier[3] = 'x';
@@ -173,7 +225,7 @@ CHAR* GetRandomFileName(CHAR* alphabet) {
 		nomFichier[0] = alphabet[i];
 		if (FindFichier(nomFichier) == BLOCKFAULT) break;
 	}
-	return nomFichier;
+	return Convert(nomFichier, 5);
 }
 
 int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer) {
@@ -186,10 +238,11 @@ int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer) {
 }
 
 // Trouver un fichier
-CHAR* FindRandomFileName() {
+const char* FindRandomFileName() {
 	//Trouve un bloc aléatoire du dossier racine
 	int nbCells = CountNbFiles();
-	int nbBlocks = nbCells / 64;
+	if (nbCells == 0) throw((string) "Aucun fichier existant.");
+	int nbBlocks = (nbCells / 64) + 1;
 	CHAR block = rand() % nbBlocks;
 
 	//Trouve la quantité de cellule dans le block choisi
@@ -204,7 +257,7 @@ CHAR* FindRandomFileName() {
 	CHAR* nomFichier = new CHAR[blockSize];
 	dur->readBlock(ReadCellFromBlock(block, cell), nomFichier);
 
-	return nomFichier;
+	return Convert(nomFichier, blockSize);
 }
 
 int CountNbFiles() {
@@ -235,82 +288,109 @@ int CountNbFiles() {
 }
 
 void UpdateScreen() {
-	CHAR* block = new CHAR[blockSize];
+	CHAR* dossierBlock = new CHAR[blockSize];
 	CHAR* buffer = new CHAR[blockSize];
-	CHAR* blockFichier = new CHAR[blockSize];
+	CHAR* blockTeteFichier = new CHAR[blockSize];
 	CHAR* listInfo = new CHAR[256];
 	CHAR currentBlock = 0;
 	CHAR lenghtLastBlock;
 	CHAR nextFileBlock;
-	string output = "";
+	string outputListFile = "";
 	bool keepgoing = true;
-	bool endOfFile = false;
 
+	//Fill list info avec 0
+	for (int i = 0; i < 256; i++) {
+		if (i >= bitMap)
+			listInfo[i] = 33;
+		else
+			listInfo[i] = 95;
+	}
+
+	//Parcourt Fichier
 	while (keepgoing) {
-		dur->readBlock(currentBlock, block);
+		dur->readBlock(currentBlock, dossierBlock);
+		listInfo[currentBlock] = 35;
 		for (int i = 0; i < blockSize; i++) {
-			if (block[i] == 255) {
-				// Fin de la liste des fichiers
+
+			// Fin de la liste des fichiers
+			if (dossierBlock[i] == 255) {
 				keepgoing = false;
-				// On doit quand meme imprimer tout les blocs
-				for (int j = 0; j < bitMap; j++) {
-					listInfo[i] = '0';
-				}
 				break;
 			}
+
+			//Debut du balayage d'un fichier
 			else {
-				dur->readBlock(block[i], blockFichier);
-				listInfo[i] = 'A';
+				//Load la tete de fichier
+				CHAR teteFichier = dossierBlock[i];
+				dur->readBlock(teteFichier, blockTeteFichier);
+				listInfo[teteFichier] = toupper(blockTeteFichier[0]);;
 
-				CHAR length = GetCharacter(currentBlock, 3);
+				//Ajoute le nom du fichier à la liste en output
+				CHAR length = GetCharacter(teteFichier, 0);
 				if (length == BLOCKFAULT)length = blockSize - 1;
-				AddToString(output, blockFichier, blockSize - 1);
+				outputListFile += "\n";
+				AddToString(outputListFile, blockTeteFichier, blockSize - 1);
 
-				lenghtLastBlock = blockFichier[63];
-				output += ", ";
-				nextFileBlock = ReadFAT(block[i]);
-				if (nextFileBlock == BLOCKFAULT) {
-					// Fin du fichier deja rencontrer
-					output += "|";
+				//Prepare la boucle qui suit
+				lenghtLastBlock = blockTeteFichier[blockSize - 1];
+				nextFileBlock = ReadFAT(teteFichier);
+				bool endOfFile = false;
+
+				// Fin du fichier deja rencontrer
+				if (nextFileBlock == BLOCKFAULT)
 					endOfFile = true;
-				}
+
+				// Bondit, block à block, on s'amuse !
 				while (!endOfFile) {
-					output += nextFileBlock + "->";
+					//Ajoute le text
+					outputListFile += " -> " + to_string((int)nextFileBlock);  // vide.txt | toto.txt -> 21 -> 40|
+
+					CHAR* content = new CHAR[blockSize];
+					dur->readBlock(nextFileBlock, content);
+
+					CHAR pastFileBlock = nextFileBlock;
 					nextFileBlock = ReadFAT(nextFileBlock);
+
 					if (nextFileBlock == BLOCKFAULT) {
 						if (lenghtLastBlock != 0) {
-							listInfo[i] = 'a';
+							listInfo[pastFileBlock] = tolower(content[0]);
 						}
 						else {
-							listInfo[i] = 'A';
+							listInfo[pastFileBlock] = toupper(content[0]);
 						}
 						endOfFile = true; // Fin du fichier
 					}
+					else {
+						listInfo[pastFileBlock] = toupper(content[0]);
+					}
 				}
-				endOfFile = false;
-				output += "|";
 			}
 		}
 		currentBlock = ReadFAT(currentBlock);
+		if (currentBlock == BLOCKFAULT) break;
 	}
+	std::cout << "Legende : \n# = dossier racine (une liste de tete de fichier)\n! = espace reserve (bitmap et FAT)";
 
-	cout << "\n\nListe des fichiers : ";
+	std::cout << "\n\nListe des fichiers : ";
 
-	cout << output << endl;
+	std::cout << outputListFile << endl;
 
+	std::cout << "\nDimension du tableau: 16x16";
 	for (int i = 0; i < 256; i++) {
-		cout << " Bloc " << i << ": " << listInfo[i] << " |";
+		if (i % 16 == 0)
+			std::cout << endl;
+		std::cout << "|" << listInfo[i] << "|";
 	}
 
-	delete[] block;
+	delete[] dossierBlock;
 	delete[] buffer;
-	delete[] blockFichier;
+	delete[] blockTeteFichier;
 	delete[] listInfo;
 	return;
 }
 
 void AddToString(string & result, CHAR* input, int lenght) {
-	for (int i = 0; i < lenght; i++) {
+	for (int i = 0; i < lenght && input[i] != 0; i++) {
 		result += input[i];
 	}
 	return;
@@ -319,7 +399,8 @@ void AddToString(string & result, CHAR* input, int lenght) {
 // FONCTIONS DES INTERACTIONS AVEC LES FICHIERS
 
 // ouvre un fichier (s'il existe) et lit (selon les paramètres) les données pour les mettre dans TampLecture puis le referme.
-void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
+void read(const char* nomFichier, int position, int nbChar, CHAR* TampLecture) {
+	CHAR* newNomFichier = Convert(nomFichier);
 	int currentChar = 0;
 	CHAR* buffer = new CHAR[blockSize];
 
@@ -327,7 +408,7 @@ void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
 	{
 		CHAR currentBlock;
 		CHAR startCell;
-		GetPosIntoFile(nomFichier, position, startCell, currentBlock);
+		GetPosIntoFile(newNomFichier, position, startCell, currentBlock);
 
 		while (true)
 		{
@@ -338,22 +419,270 @@ void read(CHAR* nomFichier, int position, int nbChar, CHAR* & TampLecture) {
 				currentChar++;
 				if (currentChar >= nbChar) {
 					delete[] buffer;
+					delete[] newNomFichier;
 					return; //Fini !
 				}
 			}
 
 			startCell = 0;
 			currentBlock = ReadFAT(currentBlock);
-			if (currentBlock == BLOCKFAULT) throw("Fichier est trop court.");
+			if (currentBlock == BLOCKFAULT) throw((string)"Fichier est trop court.");
 		}
 	}
 	catch (string error) {
-		cout << error << endl;
+		std::cout << error << endl;
 	}
 	catch (...) {
-		cout << "Erreur inconnue de lecture de fichier." << endl;
+		std::cout << "Erreur inconnue de lecture de fichier." << endl;
 	}
 	delete[] buffer;
+	delete[] newNomFichier;
+}
+
+void write(const char* nomFichier, int position, int nbChar, CHAR* TampLecture) {
+	CHAR* newNomFichier = Convert(nomFichier);
+
+	CHAR teteFichier = FindFichier(newNomFichier);
+	try
+	{
+		// Creer la tete du fichier
+		if (teteFichier == BLOCKFAULT) {
+			teteFichier = CreateFile(newNomFichier);
+		}
+
+		//Ajuste la grosseur présente dans le 64e octet
+		int oldTotalSize = FileLength(newNomFichier);
+		int newTotalSize = position + nbChar;
+
+		if (newTotalSize > oldTotalSize)
+		{
+			CHAR* teteContent = new CHAR[blockSize];
+			dur->readBlock(teteFichier, teteContent);
+			teteContent[nomFichierSize] = newTotalSize % blockSize;
+			dur->writeBlock(teteFichier, teteContent);
+		}
+	}
+	catch (string error) {
+		std::cout << error << endl;
+		delete[] newNomFichier;
+		return;
+	}
+	catch (...)
+	{
+		std::cout << "Erreur de creation de tete de fichier" << endl;
+		delete[] newNomFichier;
+		return;
+	}
+
+	try
+	{
+		int currentChar = 0;
+		CHAR* buffer = new CHAR[blockSize];
+		CHAR currentBlock;
+		CHAR startCell;
+
+		//Reserve l'espace necessaire, tant que GetPosIntoFile retourne 'false'
+		while (!GetPosIntoFile(newNomFichier, position + nbChar, startCell, currentBlock))
+			NewLinkedBlock(currentBlock);
+
+		//Marque le dernier block comme etant la fin (dans la FAT)
+		WriteFAT(currentBlock, BLOCKFAULT);
+
+		//Replace les compteur aux bonne place
+		GetPosIntoFile(newNomFichier, position, startCell, currentBlock);
+
+		//Ecriture !
+		while (true)
+		{
+			//Lit ce qui etait present
+			dur->readBlock(currentBlock, buffer);
+
+			//Remplie le text avec les nouvelles valeur
+			for (int i = startCell; i < blockSize; i++) {
+				buffer[i] = TampLecture[currentChar];
+				currentChar++;
+				if (currentChar >= nbChar) //Fini ! 
+					break;
+			}
+
+			//Écrase l'ancien block avec la nouvelle version
+			dur->writeBlock(currentBlock, buffer);
+
+			//Passe au prochain block
+			startCell = 0;
+			currentBlock = ReadFAT(currentBlock);
+
+			//Erreur ?
+			if (currentBlock == BLOCKFAULT) break;
+		}
+		delete[] buffer;
+	}
+	catch (string error) {
+		std::cout << error << endl;
+	}
+	catch (...)
+	{
+		std::cout << "Erreur d'ecriture dans le fichier" << endl;
+	}
+	delete[] newNomFichier;
+}
+
+void deleteEOF(const char* nomFichier, int position) {
+	CHAR* newNomFichier = Convert(nomFichier);
+	CHAR* buffer = new CHAR[blockSize];
+	try
+	{
+		CHAR currentBlock;
+		CHAR startCell;
+		int pos = position - 1;
+
+		if (position <= 0) {
+			DeleteFichier(newNomFichier);
+		}
+		else {
+			GetPosIntoFile(newNomFichier, pos, startCell, currentBlock);
+
+			dur->readBlock(currentBlock, buffer);
+			ClearBlockLinksFrom(currentBlock);
+			for (int i = startCell + 1; i < blockSize; i++) {
+				buffer[i] = 0;
+			}
+			dur->writeBlock(currentBlock, buffer);
+		}
+	}
+	catch (string error) {
+		std::cout << error << endl;
+	}
+	catch (...) {
+		std::cout << "Erreur inconnue d'effaceage de fichier." << endl;
+	}
+	delete[] newNomFichier;
+}
+
+void DeleteFichier(CHAR* nomFichier) {
+	CHAR firstFileBloc = FindFichier(nomFichier);
+	if (firstFileBloc == BLOCKFAULT) throw ((string) "Fichier inexistant");
+	CHAR* buffer = new CHAR[blockSize];
+	bool keepgoing = false;
+	bool getout = false;
+
+	// On rend libre les blocs du fichier
+	ClearBlockLinksFrom(firstFileBloc, false);
+
+	CHAR currentBlock = debutListeFichier;
+	CHAR pastBlock = debutListeFichier;
+	// On retire le fichier du bloc racine contenant la liste des fichiers
+	while (!getout)
+	{
+		dur->readBlock(currentBlock, buffer);
+		for (int i = 0; i < blockSize; i++) {
+			//Si on a terminé (on est arrivé aux 255)
+			if (buffer[i] == BLOCKFAULT) {
+				getout = true;
+				break;
+			}
+			//Si on a dépassé le fichier à enlever (et qu'on doit tasser le reste)
+			if (keepgoing) {
+				//Si le i+1 doit acceder au prochain block
+				if (i + 1 == blockSize) {
+					CHAR nextBlock = ReadFAT(currentBlock);
+					if (nextBlock != BLOCKFAULT) {
+						CHAR* tempBuffer = new CHAR[64];
+						dur->readBlock(nextBlock, tempBuffer);
+						buffer[i] = tempBuffer[0];
+						delete[] tempBuffer;
+					}
+				}
+				else
+				{
+					buffer[i] = buffer[i + 1];
+					//si on vient tout juste de vidé le dernier byte du block, on supprime le block
+					if (i == 0 && buffer[i] == BLOCKFAULT && pastBlock != debutListeFichier)
+						ClearBlockLinksFrom(pastBlock);
+				}
+			}
+			//Quand on arrive à la position du fichier
+			else if (buffer[i] == firstFileBloc) {
+				// on a trouve la cellule du fichier!
+				keepgoing = true;
+				buffer[i] = buffer[i + 1];
+				if (i == 0 && buffer[i] == BLOCKFAULT && pastBlock != debutListeFichier)
+					ClearBlockLinksFrom(pastBlock);
+			}
+		}
+		dur->writeBlock(currentBlock, buffer);
+		pastBlock = currentBlock;
+		currentBlock = ReadFAT(currentBlock);
+		if (currentBlock == BLOCKFAULT) break;
+	}
+	delete[] buffer;
+	return;
+}
+
+void ClearBlockLinksFrom(CHAR currentBlock, bool firstBlockIntact) {
+
+	while (true)
+	{
+		CHAR pastBlock = currentBlock;
+		currentBlock = ReadFAT(currentBlock);
+		WriteFAT(pastBlock, BLOCKFAULT);
+
+		if (!firstBlockIntact)
+			SetBitMap(pastBlock, false);
+
+		if (currentBlock == BLOCKFAULT) break;
+
+		if (firstBlockIntact)
+			SetBitMap(currentBlock, false);
+	}
+}
+
+// FONCTIONS DU DISQUE DUR
+
+void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
+	streampos pos = numBlock * blockSize;
+	hd.seekg(pos);
+	hd.read((char*)tampLecture, blockSize);
+}
+
+void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
+	streampos pos = numBlock * blockSize;
+	hd.seekp(pos);
+	hd.write((char*)tampLecture, blockSize);
+}
+
+CHAR GetBlockLibre()
+{
+	CHAR* map = (CHAR*)malloc(blockSize);
+	dur->readBlock(bitMap, map);
+
+	int cell = 0;
+	//Trouve la cell avec au moins un bit a 0
+	for (cell = 0; cell < 32; cell++) {
+		if (map[cell] != 255) break;
+	}
+
+	if (cell == 32)
+	{
+		delete[] map;
+		throw((string)"Disque dur plein !");
+	}
+
+	CHAR result = 255;
+	for (int bit = 0; bit < 8; bit++) {
+		if ((map[cell] >> bit & 0x01) == 0) { //00011001
+			result = (cell * 8) + bit;
+			break;
+		}
+	}
+
+	delete[] map;
+
+	if (result >= bitMap)
+	{
+		throw((string)"Disque dur plein !");
+	}
+	return result;
 }
 
 CHAR FindFichier(CHAR* nomFichier) {
@@ -375,9 +704,10 @@ CHAR FindFichier(CHAR* nomFichier) {
 			}
 			dur->readBlock(block[i], blockFichier);
 			if (Compare(blockFichier, nomFichier, nomFichierSize)) {
+				CHAR result = block[i];
 				delete[] block;
 				delete[] blockFichier;
-				return block[i];
+				return result;
 			}
 		}
 
@@ -390,224 +720,6 @@ CHAR FindFichier(CHAR* nomFichier) {
 	delete[] block;
 	delete[] blockFichier;
 	return BLOCKFAULT;
-}
-
-void write(CHAR* nomFichier, int position, int nbChar, CHAR* TampLecture) {
-
-	CHAR teteFichier = FindFichier(nomFichier);
-	try
-	{
-		// Creer la tete du fichier
-		if (teteFichier == BLOCKFAULT) {
-			teteFichier = CreateFile(nomFichier);
-		}
-
-		//Ajuste la grosseur présente dans le 64e octet
-		int oldTotalSize = FileLength(nomFichier);
-		int newTotalSize = position + nbChar;
-
-		if (newTotalSize > oldTotalSize)
-		{
-			CHAR* teteContent = new CHAR[blockSize];
-			dur->readBlock(teteFichier, teteContent);
-			teteContent[63] = newTotalSize % blockSize;
-			dur->writeBlock(teteFichier, teteContent);
-		}
-	}
-	catch (string error) {
-		cout << error << endl;
-		return;
-	}
-	catch (...)
-	{
-		cout << "Erreur de creation de tete de fichier" << endl;
-		return;
-	}
-
-	try
-	{
-		int currentChar = 0;
-		CHAR* buffer = new CHAR[blockSize];
-		CHAR currentBlock;
-		CHAR startCell;
-
-		//Reserve l'espace necessaire, tant que GetPosIntoFile retourne 'false'
-		while (!GetPosIntoFile(nomFichier, position + nbChar, startCell, currentBlock))
-			NewLinkedBlock(currentBlock);
-
-		//Marque le dernier block comme etant la fin (dans la FAT)
-		WriteFAT(currentBlock, BLOCKFAULT);
-
-		//Replace les compteur aux bonne place
-		GetPosIntoFile(nomFichier, position, startCell, currentBlock);
-
-		//Ecriture !
-		while (true)
-		{
-			//Lit ce qui etait present
-			dur->readBlock(currentBlock, buffer);
-
-			//Remplie le text avec les nouvelles valeur
-			for (int i = startCell; i < blockSize; i++) {
-				buffer[i] = TampLecture[currentChar];
-				currentChar++;
-				if (currentChar >= nbChar) //Fini !
-				{
-					delete[] buffer;
-					return;
-				}
-			}
-
-			//Écrase l'ancien block avec la nouvelle version
-			dur->writeBlock(currentBlock, buffer);
-
-			//Passe au prochain block
-			startCell = 0;
-			currentBlock = ReadFAT(currentBlock);
-
-			//Erreur ?
-			if (currentBlock == BLOCKFAULT) throw("Erreur d'ecriture. L'espace reserve n'est pas suffisant.");
-		}
-	}
-	catch (string error) {
-		cout << error << endl;
-		return;
-	}
-	catch (...)
-	{
-		cout << "Erreur d'ecriture dans le fichier" << endl;
-		return;
-	}
-}
-
-void deleteEOF(CHAR* nomFichier, int position) {
-	CHAR* buffer = new CHAR[blockSize];
-	try
-	{
-		CHAR currentBlock;
-		CHAR startCell;
-		int pos = position - 1;
-
-		if (position <= 0) {
-			DeleteFichier(nomFichier);
-		}
-		else {
-			GetPosIntoFile(nomFichier, pos, startCell, currentBlock);
-
-			dur->readBlock(currentBlock, buffer);
-			ClearBlockLinksFrom(currentBlock);
-			for (int i = startCell + 1; i < blockSize; i++) {
-				buffer[i] = 0;
-			}
-			dur->writeBlock(currentBlock, buffer);
-			WriteFAT(currentBlock, 0);
-		}
-	}
-	catch (string error) {
-		cout << error << endl;
-	}
-	catch (...) {
-		cout << "Erreur inconnue d'effaceage de fichier." << endl;
-	}
-}
-
-void DeleteFichier(CHAR* nomFichier) {
-	CHAR firstFileBloc = FindFichier(nomFichier);
-	CHAR* buffer = new CHAR[blockSize];
-	CHAR* oldRacine = new CHAR[blockSize];
-	bool keepgoing = false;
-	bool getout = false;
-
-	// On rend libre les blocs du fichier
-	ClearBlockLinksFrom(firstFileBloc);
-	WriteFAT(firstFileBloc, 0);
-
-	// On retire le fichier du bloc racine contenant la liste des fichiers
-	for (int j = 0; !getout; j++) {
-		dur->readBlock(j, oldRacine);
-		buffer = oldRacine;
-		for (int i = 0; i < blockSize; i++) {
-			if (keepgoing) {
-				buffer[i] = buffer[i + 1];
-			}
-			else if (oldRacine[i] == firstFileBloc) {
-				// on a trouve la cellule du fichier!
-				keepgoing = true;
-				buffer[i] = buffer[i + 1];
-			}
-			else if (oldRacine[i] == 255) {
-				getout = true;
-				break;
-			}
-		}
-		dur->writeBlock(j, buffer);
-	}
-	delete[] buffer;
-	delete[] oldRacine;
-	return;
-}
-
-void ClearBlockLinksFrom(CHAR currentBlock) {
-
-	while (true)
-	{
-		CHAR pastBlock = currentBlock;
-		currentBlock = ReadFAT(currentBlock);
-		WriteFAT(pastBlock, BLOCKFAULT);
-
-		if (currentBlock == BLOCKFAULT) break;
-
-		SetBitMap(currentBlock, false);
-	}
-}
-
-// FONCTIONS DU DISQUE DUR
-
-void DisqueDur::readBlock(CHAR numBlock, CHAR* tampLecture) {
-	streampos pos = numBlock * blockSize;
-	hd.seekg(pos);
-	hd.read((char*)tampLecture, blockSize);
-}
-
-void DisqueDur::writeBlock(CHAR numBlock, CHAR* tampLecture) {
-	streampos pos = numBlock * blockSize;
-	hd.seekp(pos);
-	hd.write((char*)tampLecture, blockSize);
-
-	SetBitMap(numBlock, true);
-}
-
-CHAR GetBlockLibre()
-{
-	CHAR* map = (CHAR*)malloc(blockSize);
-	dur->readBlock(bitMap, map);
-
-	int cell = 0;
-	//Trouve la cell avec au moins un bit a 0
-	for (cell = 0; cell < 32; cell++) {
-		if (map[cell] != 255) break;
-	}
-
-	if (cell == 32)
-	{
-		delete[] map;
-		throw("Disque dur plein !");
-	}
-
-	CHAR result = 255;
-	for (int bit = 0; bit < 8; bit++) {
-		if ((map[cell] >> bit & 0x01) == 0) {
-			result = (cell * 8) + bit;
-		}
-	}
-
-	delete[] map;
-
-	if (result >= bitMap)
-	{
-		throw("Disque dur plein !");
-	}
-	return result;
 }
 
 bool IsBlockLibre(CHAR numBlock)
@@ -659,7 +771,7 @@ void SetBitMap(CHAR numBlock, bool state)
 {
 	if (numBlock >= bitMap)
 	{
-		throw("Erreur, ne peut pas set un bit dans la bitMap > 250");
+		throw((string)"Erreur, ne peut pas set un bit dans la bitMap > 250");
 		return;
 	}
 	CHAR* map = (CHAR*)malloc(blockSize);
@@ -687,7 +799,7 @@ bool Compare(CHAR* a, CHAR* b, int size) {
 bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock) {
 	CHAR currentBlock = FindFichier(nomFichier);
 
-	if (currentBlock == BLOCKFAULT) throw("Fichier inexistant");
+	if (currentBlock == BLOCKFAULT) throw((string)"Fichier inexistant");
 	outBlock = currentBlock;
 	outPos = blockSize - 1;
 	currentBlock = ReadFAT(currentBlock);
@@ -724,12 +836,13 @@ bool GetPosIntoFile(CHAR* nomFichier, int position, CHAR& outPos, CHAR& outBlock
 CHAR CreateFile(CHAR* nomFichier)
 {
 	//Vérifie si le fichier existe déjà
-	if (FindFichier(nomFichier) != BLOCKFAULT) throw("Erreur de création de fichier, nom déjà existant.");
+	if (FindFichier(nomFichier) != BLOCKFAULT) throw((string)"Erreur de création de fichier, nom déjà existant.");
 
 	//Cree le fichier
-	nomFichier[63] = 0; //Dernier octet -> grosseur du dernier block
+	nomFichier[nomFichierSize] = 0; //Dernier octet -> grosseur du dernier block
 	CHAR teteFichier = NewBlock();
-	FillBlockWith(teteFichier, 3);
+	FillBlockWith(teteFichier, 0);
+	dur->writeBlock(teteFichier, nomFichier);
 
 	// -------Fait le lien dans le dossier racine------- //
 
@@ -760,7 +873,7 @@ CHAR CreateFile(CHAR* nomFichier)
 CHAR NewLinkedBlock(CHAR from)
 {
 	CHAR nouveauBlock = GetBlockLibre();
-	if (nouveauBlock == BLOCKFAULT) throw("Echec de creation de nouveau block, espace insuffisant sur le disque.");
+	if (nouveauBlock == BLOCKFAULT) throw((string)"Echec de creation de nouveau block, espace insuffisant sur le disque.");
 	WriteFAT(from, nouveauBlock); //Cree le lien dans la FAT
 	SetBitMap(nouveauBlock, true); //Marque le nouveau block comme etant utilisee
 
@@ -770,7 +883,7 @@ CHAR NewLinkedBlock(CHAR from)
 CHAR NewBlock()
 {
 	CHAR nouveauBlock = GetBlockLibre();
-	if (nouveauBlock == BLOCKFAULT) throw("Echec de creation de nouveau block, espace insuffisant sur le disque.");
+	if (nouveauBlock == BLOCKFAULT) throw((string)"Echec de creation de nouveau block, espace insuffisant sur le disque.");
 	SetBitMap(nouveauBlock, true); //Marque le nouveau block comme etant utilisee
 
 	return nouveauBlock;
@@ -779,7 +892,7 @@ CHAR NewBlock()
 CHAR NewBlock(CHAR* content)
 {
 	CHAR nouveauBlock = GetBlockLibre();
-	if (nouveauBlock == BLOCKFAULT) throw("Echec de creation de nouveau block, espace insuffisant sur le disque.");
+	if (nouveauBlock == BLOCKFAULT) throw((string)"Echec de creation de nouveau block, espace insuffisant sur le disque.");
 	SetBitMap(nouveauBlock, true); //Marque le nouveau block comme etant utilisee
 
 	dur->writeBlock(nouveauBlock, content);
@@ -805,4 +918,55 @@ CHAR GetCharacter(CHAR block, CHAR character) {
 		if (content[i] == character) return i;
 	}
 	return BLOCKFAULT;
+}
+
+CHAR* Convert(const char* text)
+{
+	CHAR* content = new CHAR[blockSize];
+	size_t i = 0;
+	//Remplie le content du text: "bonjour" -> "bonjour"
+	for (i = 0; i < strlen(text); i++)
+	{
+		content[i] = text[i];
+	}
+
+	//Remplie le content de \0: "bonjour" -> "bonjour\0\0\0..."
+	for (; i < blockSize; i++)
+	{
+		content[i] = 0;
+	}
+	return content;
+}
+const char* Convert(CHAR* text, int lenght)
+{
+	char* content = new char[blockSize];
+	size_t i = 0;
+	//Remplie le content du text: "bonjour" -> "bonjour"
+	for (i = 0; i < lenght; i++)
+	{
+		content[i] = text[i];
+	}
+
+	//Remplie le content de \0: "bonjour" -> "bonjour\0\0\0..."
+	for (; i < blockSize; i++)
+	{
+		content[i] = 0;
+	}
+	return content;
+}
+
+void FormatHDD() {
+	//Fill bitmap de 0
+	FillBlockWith(bitMap, 0);
+	//FAT
+	for (int pos = FAT; pos <= BLOCKFAULT; pos++)
+		FillBlockWith(pos, BLOCKFAULT);
+	//Dossier racine
+	FillBlockWith(0, BLOCKFAULT);
+	//Bitmap
+	SetBitMap(0, true);
+}
+bool FileExists(const char*  name) {
+	ifstream f(name);
+	return f.good();
 }
