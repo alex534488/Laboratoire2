@@ -100,8 +100,6 @@ int main() {
 	//Setup le HDD si necessaire
 	if (mustFormat) FormatHDD();
 
-	//string buffer;
-
 	while (true) {
 		/*CHAR* data = new CHAR[66]{ "BobEstUne_BobEstUne_BobEstUne_xx BobEstUne_BobEstUne_BobEstUne_xx" };
 		write("toto.txt", 0, 66, data);
@@ -122,6 +120,11 @@ int main() {
 
 		char* temp = new char[30];
 		cin >> temp;
+		if (temp[0] == 'q')
+		{
+			delete temp;
+			break;
+		}
 		delete temp;
 	}
 
@@ -133,48 +136,51 @@ int main() {
 
 void UpdateFiles() {
 	int maxLenght = 100;
-	CHAR alphabet[] = "abcdefghijklmnopqrstvwxyz";
+	CHAR alphabet[] = "abcdefghijklmnopqrstuvwxyz";
 	CHAR* buffer = new CHAR[maxLenght];
 
-	int action = rand() % 4;
+	int action = rand() % 100;
 
 	cout << "\n\n" << endl;
-	switch (action)
-	{
-	default:
-	case 0:
-	{
-		cout << "Creation d'un nouveau fichier." << endl;
-		// Ecriture d'un nouveau fichier
+
+	// Ecriture d'un nouveau fichier, poids: 30
+	if (action < 30) {
 		const char* nomFichier = CreateRandomFileName(alphabet);
-		write(nomFichier, 0, WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
+		int longueur = WriteRandomStuff(maxLenght, nomFichier[0], buffer);
+		cout << "Creation du fichier " << nomFichier << " (de longueur " + to_string(longueur) << ")." << endl;
+		write(nomFichier, 0, longueur, buffer);
 		delete[] nomFichier;
 	}
-	break;
-	case 1:
-		cout << "Suppression totale d'un fichier existant." << endl;
-		// Supprimer un fichier
-		deleteEOF(FindRandomFileName(), 0);
-		break;
-	case 2:
-	{
-		cout << "Ecriture dans un fichier existant." << endl;
+
+	// Ecriture dans un fichier existant, poids: 40
+	else if (action < 70) {
 		const char* nomFichier = FindRandomFileName();
-		// Ecriture dans un fichier existant
-		write(nomFichier, rand() % FileLength(Convert(nomFichier)), WriteRandomStuff(maxLenght, nomFichier[0], buffer), buffer);
+		int totalSize = FileLength(Convert(nomFichier));
+		int position = (rand() % totalSize*0.2) + totalSize * 0.8f;
+		int size = WriteRandomStuff(maxLenght, nomFichier[0], buffer);
+		cout << "Ecriture dans " << nomFichier << " (a partir du " + to_string(position + 1) << "e octet, sur un longeur de " << to_string(size) << ")." << endl;
+		write(nomFichier, position, size, buffer);
 		delete[] nomFichier;
 	}
-	break;
-	case 3:
+
+	// Supprimer un fichier, poids: 15
+	else if (action < 85)
 	{
-		cout << "Suppresion de la fin d'un fichier." << endl;
-		// Effacement de la fin d'un fichier
 		const char* nomFichier = FindRandomFileName();
-		deleteEOF(nomFichier, rand() % FileLength(Convert(nomFichier)));
+		cout << "Suppression totale de " << nomFichier << endl;
+		deleteEOF(nomFichier, 0);
+	}
+
+	// Effacement de la fin d'un fichier, poids: 15
+	else
+	{
+		const char* nomFichier = FindRandomFileName();
+		int pos = rand() % FileLength(Convert(nomFichier));
+		cout << "Suppresion partiel de " << nomFichier << " (du " + to_string(pos + 1) << "e octets jusqu'a la fin)." << endl;
+		deleteEOF(nomFichier, pos);
 		delete[] nomFichier;
 	}
-	break;
-	}
+
 	cout << "\n";
 
 	delete[] buffer;
@@ -193,13 +199,14 @@ int FileLength(CHAR* nomFichier) {
 	int quantitéDeBlockPlein = 0;
 
 	//Trouve la quantité de block plein (EXCLUANT LE PREMIER)  ex: [64,64,64,21]  -> 3
-	CHAR next = ReadFAT(filePos);
+	CHAR current = filePos;
 	while (true)
 	{
-		next = ReadFAT(next);
-		if (next == 255) break;
+		current = ReadFAT(current);
+		if (current == BLOCKFAULT) break;
 		quantitéDeBlockPlein++;
 	}
+	if (grosseurDernierBlock != 0) quantitéDeBlockPlein--;
 
 	// Retourne la quantité totale ex: (3 * 64) + 21
 	return quantitéDeBlockPlein * blockSize + grosseurDernierBlock;
@@ -230,6 +237,7 @@ const char* CreateRandomFileName(CHAR* alphabet) {
 
 int WriteRandomStuff(int nbCharMax, CHAR laLettre, CHAR* & buffer) {
 	int textLenght = rand() % nbCharMax;
+	if (textLenght < 5) textLenght = 5;
 
 	for (int i = 0; i < textLenght; i++) {
 		buffer[i] = laLettre;
@@ -330,6 +338,7 @@ void UpdateScreen() {
 				if (length == BLOCKFAULT)length = blockSize - 1;
 				outputListFile += "\n";
 				AddToString(outputListFile, blockTeteFichier, blockSize - 1);
+				outputListFile += "[" + to_string(teteFichier) + "]";
 
 				//Prepare la boucle qui suit
 				lenghtLastBlock = blockTeteFichier[blockSize - 1];
@@ -404,36 +413,27 @@ void read(const char* nomFichier, int position, int nbChar, CHAR* TampLecture) {
 	int currentChar = 0;
 	CHAR* buffer = new CHAR[blockSize];
 
-	try
+	CHAR currentBlock;
+	CHAR startCell;
+	GetPosIntoFile(newNomFichier, position, startCell, currentBlock);
+
+	while (true)
 	{
-		CHAR currentBlock;
-		CHAR startCell;
-		GetPosIntoFile(newNomFichier, position, startCell, currentBlock);
+		dur->readBlock(currentBlock, buffer);
 
-		while (true)
-		{
-			dur->readBlock(currentBlock, buffer);
-
-			for (int i = startCell; i < blockSize; i++) {
-				TampLecture[currentChar] = buffer[i];
-				currentChar++;
-				if (currentChar >= nbChar) {
-					delete[] buffer;
-					delete[] newNomFichier;
-					return; //Fini !
-				}
+		for (int i = startCell; i < blockSize; i++) {
+			TampLecture[currentChar] = buffer[i];
+			currentChar++;
+			if (currentChar >= nbChar) {
+				delete[] buffer;
+				delete[] newNomFichier;
+				return; //Fini !
 			}
-
-			startCell = 0;
-			currentBlock = ReadFAT(currentBlock);
-			if (currentBlock == BLOCKFAULT) throw((string)"Fichier est trop court.");
 		}
-	}
-	catch (string error) {
-		std::cout << error << endl;
-	}
-	catch (...) {
-		std::cout << "Erreur inconnue de lecture de fichier." << endl;
+
+		startCell = 0;
+		currentBlock = ReadFAT(currentBlock);
+		if (currentBlock == BLOCKFAULT) throw((string)"Fichier est trop court.");
 	}
 	delete[] buffer;
 	delete[] newNomFichier;
@@ -443,119 +443,99 @@ void write(const char* nomFichier, int position, int nbChar, CHAR* TampLecture) 
 	CHAR* newNomFichier = Convert(nomFichier);
 
 	CHAR teteFichier = FindFichier(newNomFichier);
-	try
+
+	// Creer la tete du fichier
+	if (teteFichier == BLOCKFAULT) {
+		teteFichier = CreateFile(newNomFichier);
+	}
+
+	//Ajuste la grosseur présente dans le 64e octet
+	int oldTotalSize = FileLength(newNomFichier);
+	int newTotalSize = position + nbChar;
+
+	if (newTotalSize > oldTotalSize)
 	{
-		// Creer la tete du fichier
-		if (teteFichier == BLOCKFAULT) {
-			teteFichier = CreateFile(newNomFichier);
+		CHAR* teteContent = new CHAR[blockSize];
+		dur->readBlock(teteFichier, teteContent);
+		teteContent[nomFichierSize] = newTotalSize % blockSize;
+		dur->writeBlock(teteFichier, teteContent);
+	}
+
+	int currentChar = 0;
+	CHAR* buffer = new CHAR[blockSize];
+	CHAR currentBlock;
+	CHAR startCell;
+
+	//Reserve l'espace necessaire, tant que GetPosIntoFile retourne 'false'
+	while (!GetPosIntoFile(newNomFichier, position + nbChar - 1, startCell, currentBlock))
+		NewLinkedBlock(currentBlock);
+
+	//Marque le dernier block comme etant la fin (dans la FAT)
+	WriteFAT(currentBlock, BLOCKFAULT);
+
+	//Replace les compteur aux bonne place
+	GetPosIntoFile(newNomFichier, position, startCell, currentBlock);
+
+	//Ecriture !
+	while (true)
+	{
+		//Lit ce qui etait present
+		dur->readBlock(currentBlock, buffer);
+
+		//Remplie le text avec les nouvelles valeur
+		for (int i = startCell; i < blockSize; i++) {
+			buffer[i] = TampLecture[currentChar];
+			currentChar++;
+			if (currentChar >= nbChar) //Fini ! 
+				break;
 		}
 
-		//Ajuste la grosseur présente dans le 64e octet
-		int oldTotalSize = FileLength(newNomFichier);
-		int newTotalSize = position + nbChar;
+		//Écrase l'ancien block avec la nouvelle version
+		dur->writeBlock(currentBlock, buffer);
 
-		if (newTotalSize > oldTotalSize)
-		{
-			CHAR* teteContent = new CHAR[blockSize];
-			dur->readBlock(teteFichier, teteContent);
-			teteContent[nomFichierSize] = newTotalSize % blockSize;
-			dur->writeBlock(teteFichier, teteContent);
-		}
+		//Passe au prochain block
+		startCell = 0;
+		currentBlock = ReadFAT(currentBlock);
+
+		//Erreur ?
+		if (currentBlock == BLOCKFAULT) break;
 	}
-	catch (string error) {
-		std::cout << error << endl;
-		delete[] newNomFichier;
-		return;
-	}
-	catch (...)
-	{
-		std::cout << "Erreur de creation de tete de fichier" << endl;
-		delete[] newNomFichier;
-		return;
-	}
-
-	try
-	{
-		int currentChar = 0;
-		CHAR* buffer = new CHAR[blockSize];
-		CHAR currentBlock;
-		CHAR startCell;
-
-		//Reserve l'espace necessaire, tant que GetPosIntoFile retourne 'false'
-		while (!GetPosIntoFile(newNomFichier, position + nbChar, startCell, currentBlock))
-			NewLinkedBlock(currentBlock);
-
-		//Marque le dernier block comme etant la fin (dans la FAT)
-		WriteFAT(currentBlock, BLOCKFAULT);
-
-		//Replace les compteur aux bonne place
-		GetPosIntoFile(newNomFichier, position, startCell, currentBlock);
-
-		//Ecriture !
-		while (true)
-		{
-			//Lit ce qui etait present
-			dur->readBlock(currentBlock, buffer);
-
-			//Remplie le text avec les nouvelles valeur
-			for (int i = startCell; i < blockSize; i++) {
-				buffer[i] = TampLecture[currentChar];
-				currentChar++;
-				if (currentChar >= nbChar) //Fini ! 
-					break;
-			}
-
-			//Écrase l'ancien block avec la nouvelle version
-			dur->writeBlock(currentBlock, buffer);
-
-			//Passe au prochain block
-			startCell = 0;
-			currentBlock = ReadFAT(currentBlock);
-
-			//Erreur ?
-			if (currentBlock == BLOCKFAULT) break;
-		}
-		delete[] buffer;
-	}
-	catch (string error) {
-		std::cout << error << endl;
-	}
-	catch (...)
-	{
-		std::cout << "Erreur d'ecriture dans le fichier" << endl;
-	}
+	delete[] buffer;
 	delete[] newNomFichier;
 }
 
 void deleteEOF(const char* nomFichier, int position) {
 	CHAR* newNomFichier = Convert(nomFichier);
 	CHAR* buffer = new CHAR[blockSize];
-	try
-	{
-		CHAR currentBlock;
-		CHAR startCell;
-		int pos = position - 1;
 
-		if (position <= 0) {
-			DeleteFichier(newNomFichier);
-		}
-		else {
-			GetPosIntoFile(newNomFichier, pos, startCell, currentBlock);
+	CHAR currentBlock;
+	CHAR startCell;
+	int previousPos = position - 1;
 
-			dur->readBlock(currentBlock, buffer);
-			ClearBlockLinksFrom(currentBlock);
-			for (int i = startCell + 1; i < blockSize; i++) {
-				buffer[i] = 0;
-			}
-			dur->writeBlock(currentBlock, buffer);
+	if (position <= 0) {
+		DeleteFichier(newNomFichier);
+	}
+	else {
+		//Ajuste le dernier bit de la tete de fichier (indiquant la grosseur du dernier block)
+		int newLastBlockSize = position % blockSize;
+		CHAR teteFichier = FindFichier(newNomFichier);
+
+		dur->readBlock(teteFichier, buffer);
+		buffer[blockSize - 1] = newLastBlockSize;
+		dur->writeBlock(teteFichier, buffer);
+
+
+		//Efface les données.	 ex: pos=2   ->  [5,12,DEL,DEL,DEL...]
+		GetPosIntoFile(newNomFichier, previousPos, startCell, currentBlock);
+
+		dur->readBlock(currentBlock, buffer);
+		ClearBlockLinksFrom(currentBlock);
+		for (int i = startCell+1; i < blockSize; i++) {
+			buffer[i] = 0;
 		}
+		dur->writeBlock(currentBlock, buffer);
 	}
-	catch (string error) {
-		std::cout << error << endl;
-	}
-	catch (...) {
-		std::cout << "Erreur inconnue d'effaceage de fichier." << endl;
-	}
+
 	delete[] newNomFichier;
 }
 
