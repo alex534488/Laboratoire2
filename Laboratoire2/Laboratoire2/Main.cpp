@@ -115,17 +115,19 @@ int main() {
 	if (mustFormat) FormatHDD();
 
 	// Introduction au programme
-	cout << "-------------------------------------------------------------------------------------------------------------------------------------------" << endl;
-	cout << "\nBienvenue dans le programme du systeme d'exploitation PATOS faissant la gestion du disque de dur." << endl;
+	cout << "\nBienvenue dans le programme du systeme d'exploitation PATOS faisant la gestion du disque de dur." << endl;
 	cout << "\nProjet realise le 22 novembre 2016 par Alexandre Blanchet et Frederic Bessette." << endl;
 	cout << "\nVoici quelques elements important dont vous devrez faire la connaissance avant votre premiere utilisation:" << endl;
-	cout << "\n* A chaque mise a jour du programme, celui-ci affichera l'etat complet du système a moins qu'il n'y ait une erreur" << endl;
+	cout << "\n* A chaque mise a jour du programme, celui-ci affichera l'etat complet du systeme a moins qu'il n'y ait une erreur" << endl;
 	cout << "\n* Le programme attendra une entree de l'utilisateur avant de poursuivre vers sa prochaine mise a jour" << endl;
-	cout << "\n* Il suffit d'entree Q pour quitter le programme entre les mises a jour" << endl;
-	cout << "\n* La mise a jour peut effectue l'une des 4 actions suivantes: Creation ou suppression d'un fichier et ecriture ou suppression de donnees" << endl;
+	cout << "\n* Il suffit d'entree Q pour quitter le programme" << endl;
+	cout << "\n* La mise a jour peut effectuer l'une des 4 actions suivantes: Creation ou suppression d'un fichier et ecriture ou suppression de donnees" << endl;
 	cout << "\n* Une action est aleatoirement choisit parmis ceux disponible, la creation et l'ecriture ayant une plus grande priorite" << endl;
-	cout << "\n-------------------------------------------------------------------------------------------------------------------------------------------";
+	cout << "\n* A NOTER - Il est fort probable que le programme tombe aleatoirement sur l'action 'suppression de fichier' alors qu'il n'y en a pas."
+		<< "C'est normal, il ne suffit que d'entrer une lettre pour passer a la prochaine action." << endl;
+	cout << "\n---------------\n";
 
+	system("pause");
 	// Boucle principale du programme
 	while (true) {
 		try
@@ -144,6 +146,7 @@ int main() {
 		}
 
 		// Arrêt du programme jusqu'à la prochaine entrée
+		cout << " \nentrez une lettre:";
 		char* temp = new char[30];
 		cin >> temp;
 		if (temp[0] == 'q')
@@ -575,6 +578,7 @@ CHAR NewLinkedBlock(CHAR from)
 	if (nouveauBlock == BLOCKFAULT) throw((string)"Echec de creation de nouveau block, espace insuffisant sur le disque.");
 	WriteFAT(from, nouveauBlock); //Cree le lien dans la FAT
 	SetBitMap(nouveauBlock, true); //Marque le nouveau block comme etant utilisee
+	FillBlockWith(nouveauBlock, 0);
 
 	return nouveauBlock;
 }
@@ -585,6 +589,7 @@ CHAR NewBlock()
 	CHAR nouveauBlock = GetBlockLibre();
 	if (nouveauBlock == BLOCKFAULT) throw((string)"Echec de creation de nouveau block, espace insuffisant sur le disque.");
 	SetBitMap(nouveauBlock, true); //Marque le nouveau block comme etant utilisee
+	FillBlockWith(nouveauBlock, 0);
 
 	return nouveauBlock;
 }
@@ -595,6 +600,7 @@ CHAR NewBlock(CHAR* content)
 	CHAR nouveauBlock = GetBlockLibre();
 	if (nouveauBlock == BLOCKFAULT) throw((string)"Echec de creation de nouveau block, espace insuffisant sur le disque.");
 	SetBitMap(nouveauBlock, true); //Marque le nouveau block comme etant utilisee
+	FillBlockWith(nouveauBlock, 0);
 
 	dur->writeBlock(nouveauBlock, content);
 
